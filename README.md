@@ -31,7 +31,7 @@ Do not review the site by double-clicking `index.html`. YouTube blocks embedded 
 
 ## Content and assets
 
-All public-facing images and PDFs are in `assets/`. Large leadership photos were resized and converted to WebP for fast delivery. Original files remain untouched elsewhere in the COMEC project.
+All public-facing images and PDFs are in `assets/`. Greg Bethel's photo and other large imagery are optimized as WebP; Philip Boals's portrait uses the exact full-resolution JPEG supplied for maximum fidelity. Original files remain untouched elsewhere in the COMEC project.
 
 The old WordPress backup was used only to recover COMEC-owned assets, historical mission language, contact details, and the official YouTube ID. It was not treated as authoritative for current leadership or current events.
 
