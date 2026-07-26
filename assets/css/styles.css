@@ -181,6 +181,86 @@ li + li {
   text-align: center;
 }
 
+.event-spotlight {
+  color: var(--white);
+  background:
+    radial-gradient(circle at 70% -70%, rgba(115, 206, 212, 0.25), transparent 28rem),
+    linear-gradient(112deg, var(--navy-deep), var(--blue));
+  border-bottom: 0.35rem solid var(--gold);
+}
+
+.event-spotlight__inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  padding-block: clamp(1.35rem, 3vw, 2.2rem);
+}
+
+.event-spotlight__date {
+  display: grid;
+  place-items: center;
+  width: 6.25rem;
+  min-height: 6.25rem;
+  padding: 0.55rem;
+  color: var(--navy);
+  background: var(--gold);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+  line-height: 1;
+}
+
+.event-spotlight__date span,
+.event-spotlight__date small {
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.event-spotlight__date strong {
+  font-family: var(--font-display);
+  font-size: 2.65rem;
+}
+
+.event-spotlight__copy h2 {
+  margin: 0.15rem 0 0.35rem;
+  color: var(--white);
+  font-size: clamp(1.55rem, 3vw, 2.45rem);
+  letter-spacing: -0.025em;
+}
+
+.event-spotlight__copy p {
+  margin: 0;
+  color: #d8edf1;
+  font-size: 0.95rem;
+}
+
+.event-spotlight__kicker {
+  color: var(--gold);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.event-spotlight__actions {
+  display: grid;
+  gap: 0.45rem;
+  width: min(100%, 15rem);
+  text-align: center;
+}
+
+.event-spotlight__flyer {
+  min-height: 2.25rem;
+  color: var(--white);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.event-spotlight__flyer:hover {
+  color: var(--gold);
+}
+
 .section {
   padding-block: clamp(4.5rem, 8vw, 7.5rem);
 }
@@ -1823,6 +1903,18 @@ li + li {
     display: none;
   }
 
+  .event-spotlight__inner {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .event-spotlight__actions {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 15rem) auto;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+  }
+
   .hero__inner {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -1908,6 +2000,28 @@ li + li {
   .header-inner {
     grid-template-columns: minmax(0, 13rem) auto;
     justify-content: space-between;
+  }
+
+  .event-spotlight__date {
+    width: 5.25rem;
+    min-height: 5.25rem;
+  }
+
+  .event-spotlight__date strong {
+    font-size: 2.15rem;
+  }
+
+  .event-spotlight__copy h2 {
+    font-size: 1.35rem;
+  }
+
+  .event-spotlight__actions {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .event-spotlight__actions .button {
+    width: 100%;
   }
 
   .eyebrow {

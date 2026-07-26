@@ -51,7 +51,17 @@
       }
 
       const iframe = document.createElement("iframe");
-      iframe.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(videoId) + "?autoplay=1&rel=0";
+      const embedParams = new URLSearchParams({
+        autoplay: "1",
+        playsinline: "1",
+        rel: "0"
+      });
+
+      if (window.location.origin && window.location.origin !== "null") {
+        embedParams.set("origin", window.location.origin);
+      }
+
+      iframe.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(videoId) + "?" + embedParams.toString();
       iframe.title = "An Introduction to COMEC";
       iframe.loading = "eager";
       iframe.referrerPolicy = "strict-origin-when-cross-origin";
