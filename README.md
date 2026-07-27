@@ -22,6 +22,7 @@ Do not review the site by double-clicking `index.html`. YouTube blocks embedded 
 - `get-help.html` — crisis-first, scenario-based reporting and support guide
 - `programs.html` — documented COMEC services grouped as Respond, Prevent, Support
 - `events.html` — September 12 golf tournament, December 19 gala, and a past-events photo gallery
+- `volunteer.html` — community engagement, event, and business-development volunteer opportunities
 - `resources.html` — official hotlines, reporting portals, and prevention resources
 - `about.html` — mission, history, Greg Bethel, Philip Boals, legal identity
 - `donate.html` — verified PayPal route, check instructions, sponsorship, giving trust
@@ -44,6 +45,7 @@ The old WordPress backup was used only to recover COMEC-owned assets, historical
 5. Connect donation and event transactions to the CRM before claiming automated donor records.
 6. Configure the production domain, HTTPS, analytics/consent settings, and redirects from important WordPress URLs.
 7. Run the link and accessibility checks again after any production-platform conversion.
+8. Assign a staff owner for volunteer calls and confirm the current orientation, screening, and placement process.
 
 ## Deployment and credentials
 

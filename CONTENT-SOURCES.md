@@ -1,6 +1,6 @@
 # COMEC website content sources
 
-Last reviewed: July 25, 2026.
+Last reviewed: July 27, 2026.
 
 This file is the publishing source of truth. “Verified” means the value is backed by a current COMEC document, direct COMEC confirmation, or the responsible first-party agency. It does not mean the old WordPress page happens to contain the same text.
 
@@ -49,6 +49,15 @@ This file is the publishing source of truth. “Verified” means the value is b
 | National trafficking | 1-888-373-7888 | [National Human Trafficking Hotline](https://humantraffickinghotline.org/) | Quarterly |
 | Youth mental-health crisis | Call/text 988; Tennessee callers can press 0 for youth crisis services | [988 Lifeline](https://988lifeline.org/) and Tennessee crisis guidance | Quarterly |
 
+## Volunteer recruitment
+
+| Volunteer field | Published value | Primary source | Status |
+|---|---|---|---|
+| Current focus areas | Community engagement; event support; business development | Direct COMEC request, July 27, 2026 | Current recruitment priorities; review quarterly |
+| Public next step | Call the COMEC office at 901-222-0700 | Verified office phone in current COMEC materials | Assign a staff owner before launch |
+| Role descriptions | Outreach and awareness; event guest/logistics support; partner introductions and stewardship | Working descriptions based on the three requested focus areas | Staff must confirm assignments and boundaries during intake |
+| Screening and training | Requirements depend on the assignment and are explained before placement | Publication-safe process language; no specific policy supplied | Confirm COMEC’s current policy before adding detailed requirements |
+
 ## Assets and rights
 
 - Wide logo: recovered from COMEC’s WordPress media library.
@@ -79,5 +88,6 @@ This file is the publishing source of truth. “Verified” means the value is b
 - [ ] Event lead reconfirms gala time, venue, and “coming soon” language.
 - [ ] Treasurer or authorized officer tests the PayPal hosted button and receipt identity.
 - [ ] Staff confirms the office phone and address.
+- [ ] Volunteer lead confirms role descriptions, intake ownership, and any screening or training requirements.
 - [ ] Staff confirms the rights record for every non-portrait photo.
 - [ ] External hotline links are tested.
