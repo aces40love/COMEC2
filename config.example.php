@@ -65,7 +65,7 @@ return [
     // Sent message content is scrubbed after this period; delivery audit metadata remains.
     'EMAIL_OUTBOX_RETENTION_DAYS' => 90,
     'INTERNAL_NOTIFICATION_RECIPIENTS' => [
-        'pboals@theboalsgroup.com',
+        'pboals77@yahoo.com',
         'comecnonprofit@gmail.com',
         'underwoodudl@gmail.com',
     ],

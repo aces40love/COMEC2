@@ -54,7 +54,7 @@ Only a canonically verified Square `COMPLETED` payment is treated as paid.
 - Square may email its processor receipt to the payer, depending on buyer settings.
 - COMEC emails the payer the reliable detailed payment/event confirmation and acknowledgment.
 - COMEC separately emails each of these staff recipients:
-  - `pboals@theboalsgroup.com`
+  - `pboals77@yahoo.com`
   - `comecnonprofit@gmail.com`
   - `underwoodudl@gmail.com`
 
