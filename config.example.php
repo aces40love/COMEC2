@@ -28,8 +28,12 @@ return [
     'SQUARE_CATALOG_VARIATIONS' => [
         // 'corporate_sponsor' => 'CATALOG_VARIATION_ID',
     ],
-    // A CPA must approve every description and FMV before checkout is enabled.
-    // Null placeholders intentionally fail closed; do not guess these values.
+    // Default: send a payment confirmation without representing any portion as
+    // a deductible charitable contribution. The only other accepted value is
+    // benefit_fmv, which requires every PACKAGE_BENEFITS entry below.
+    'EVENT_DISCLOSURE_MODE' => 'payment_confirmation_only',
+    // Used only in benefit_fmv mode. A CPA must approve every description and
+    // FMV before that mode is enabled. Null placeholders fail closed there.
     'PACKAGE_BENEFITS' => [
         'corporate_sponsor' => ['description' => '', 'fair_market_value_cents' => null],
         'contest_sponsor' => ['description' => '', 'fair_market_value_cents' => null],

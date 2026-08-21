@@ -34,7 +34,7 @@ fwrite($stream, "\xEF\xBB\xBF");
 fputcsv($stream, [
     'Reference', 'Event code', 'Event', 'Event date', 'Status', 'Created UTC', 'Paid UTC',
     'Package', 'Package unit amount', 'Package quantity', 'Team count', 'Ticket package count', 'Add-ons',
-    'Base amount', 'Add-on amount', 'Registration total', 'Net received',
+    'Base amount', 'Add-on amount', 'Registration total', 'Net received', 'Disclosure mode',
     'Benefits FMV', 'Maximum deductible amount', 'Refunded', 'Payer', 'Company', 'Email', 'Phone',
     'Address', 'City', 'State', 'ZIP', 'Sponsor display', 'Contest',
     'Number attending', 'Package capacity', 'Team rosters', 'Gala ticket groups', 'Flat attendee names',
@@ -98,6 +98,7 @@ foreach ($registrations as $registration) {
     $netReceived = in_array($registration['status'], ['paid', 'partially_refunded', 'refunded'], true)
         ? number_format(max(0, (int) $registration['amount_cents'] - $refundedCents) / 100, 2, '.', '')
         : '';
+    $isBenefitFmv = ($registration['disclosure_mode'] ?? null) === 'benefit_fmv';
     $row = [
         $registration['public_reference'],
         $registration['event_code'],
@@ -116,8 +117,13 @@ foreach ($registrations as $registration) {
         number_format((int) $registration['addon_amount_cents'] / 100, 2, '.', ''),
         number_format((int) $registration['amount_cents'] / 100, 2, '.', ''),
         $netReceived,
-        number_format((int) $registration['fair_market_value_cents'] / 100, 2, '.', ''),
-        number_format((int) $registration['deductible_amount_cents'] / 100, 2, '.', ''),
+        $registration['disclosure_mode'] ?? '',
+        $isBenefitFmv && $registration['fair_market_value_cents'] !== null
+            ? number_format((int) $registration['fair_market_value_cents'] / 100, 2, '.', '')
+            : '',
+        $isBenefitFmv && $registration['deductible_amount_cents'] !== null
+            ? number_format((int) $registration['deductible_amount_cents'] / 100, 2, '.', '')
+            : '',
         number_format($refundedCents / 100, 2, '.', ''),
         trim($registration['payer_first_name'] . ' ' . $registration['payer_last_name']),
         $registration['payer_company'],

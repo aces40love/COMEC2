@@ -18,6 +18,7 @@
   const participantSection = card.querySelector("[data-participant-section]");
   const participantTitle = card.querySelector("[data-participant-title]");
   const participantList = card.querySelector("[data-detail-participants]");
+  const paymentConfirmationNotice = card.querySelector("[data-payment-confirmation-notice]");
   const receiptLink = card.querySelector("[data-receipt-link]");
   const retryButton = card.querySelector("[data-status-retry]");
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -26,6 +27,8 @@
   const validToken = /^[A-Za-z0-9_-]{43}$/.test(token);
   const pendingStatuses = new Set(["created", "open", "pending", "processing", "pending_checkout", "pending_payment", "checkout_pending", "payment_pending", "unpaid"]);
   const finalStatuses = new Set(["paid", "completed", "complete", "refunded", "partially_refunded", "failed", "error", "checkout_error", "expired", "canceled", "cancelled"]);
+  const benefitFmvMode = "benefit_fmv";
+  const paymentConfirmationMode = "payment_confirmation_only";
   const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
   let timer = null;
   let pollCount = 0;
@@ -82,6 +85,15 @@
 
   function textValue(value) {
     return typeof value === "string" ? value.trim() : "";
+  }
+
+  function validDisclosure(data) {
+    if (!data) return false;
+    if (data.disclosure_mode === benefitFmvMode) return true;
+    return data.disclosure_mode === paymentConfirmationMode
+      && data.benefit_description === null
+      && data.fair_market_value_cents === null
+      && data.max_deductible_cents === null;
   }
 
   function orderedRecords(records, maximum) {
@@ -333,6 +345,8 @@
       receiptLink.removeAttribute("href");
     }
 
+    paymentConfirmationNotice.hidden = data.disclosure_mode !== paymentConfirmationMode;
+
     details.hidden = false;
   }
 
@@ -375,6 +389,7 @@
     card.classList.remove("status-card--success", "status-card--warning", "status-card--pending");
     card.classList.add("status-card--error");
     setIndicator("error");
+    paymentConfirmationNotice.hidden = true;
     title.textContent = responseStatus === 404 ? "Registration not found" : "We couldn’t check your registration";
     message.textContent = plainMessage(data, responseStatus === 404
       ? "This status link is invalid or has expired. Use the link from checkout or contact COMEC."
@@ -432,6 +447,11 @@
       }
       if (!response.ok || !data || data.ok === false) {
         renderRequestError(data, response.status);
+        return;
+      }
+
+      if (!validDisclosure(data)) {
+        renderRequestError({ message: "The registration details could not be verified. Please try again or contact COMEC." }, 0);
         return;
       }
 

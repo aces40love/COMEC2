@@ -39,6 +39,7 @@ putenv('RATE_LIMIT_SECRET=test-only-rate-limit-secret');
 putenv('HTTPS_ONLY=false');
 putenv('SQUARE_WEBHOOK_SIGNATURE_KEY=' . $testWebhookKey);
 putenv('SQUARE_WEBHOOK_NOTIFICATION_URL=' . $testWebhookUrl);
+putenv('EVENT_DISCLOSURE_MODE=benefit_fmv');
 putenv('PACKAGE_BENEFITS_JSON=' . json_encode($testBenefits, JSON_THROW_ON_ERROR));
 
 require_once $siteRoot . '/app/bootstrap.php';
@@ -278,6 +279,7 @@ function test_email_registration(array $validated): array
         'payer_city' => $validated['payer']['city'],
         'payer_state' => $validated['payer']['state'],
         'payer_postal_code' => $validated['payer']['postal_code'],
+        'disclosure_mode' => $validated['disclosure_mode'],
         'benefit_description' => $validated['benefit']['description'],
         'fair_market_value_cents' => $validated['benefit']['fair_market_value_cents'],
         'deductible_amount_cents' => $validated['benefit']['deductible_amount_cents'],
@@ -687,6 +689,7 @@ $tests['payer mailing address is required and normalized'] = static function ():
 };
 
 $tests['benefit descriptions, FMV, and deductible amounts come from configuration'] = static function (): void {
+    test_assert_same('benefit_fmv', app_config('EVENT_DISCLOSURE_MODE'));
     $snapshot = app_registration_benefit_snapshot(
         'corporate_sponsor',
         1,
@@ -705,9 +708,38 @@ $tests['benefit descriptions, FMV, and deductible amounts come from configuratio
     test_assert_same(0, $clamped['deductible_amount_cents']);
 };
 
+$tests['payment-confirmation disclosure bypasses FMV and unknown modes fail closed'] = static function () use ($siteRoot): void {
+    $snapshot = app_registration_disclosure_snapshot(
+        'corporate_sponsor',
+        3,
+        ['team_mulligans' => 2],
+        308000,
+        'payment_confirmation_only'
+    );
+    test_assert_same('payment_confirmation_only', $snapshot['mode']);
+    test_assert_same(null, $snapshot['description']);
+    test_assert_same(null, $snapshot['fair_market_value_cents']);
+    test_assert_same(null, $snapshot['deductible_amount_cents']);
+
+    $benefit = app_registration_disclosure_snapshot('gala_couple', 2, [], 50000, 'benefit_fmv');
+    test_assert_same('benefit_fmv', $benefit['mode']);
+    test_assert_same('2 × Two gala admissions', $benefit['description']);
+    test_assert_same(24000, $benefit['fair_market_value_cents']);
+    test_assert_same(26000, $benefit['deductible_amount_cents']);
+
+    test_expect_runtime_exception(static fn (): string => app_disclosure_mode_value('unknown_mode'));
+    $configSource = file_get_contents($siteRoot . '/app/config.php');
+    test_assert_true(is_string($configSource));
+    test_assert_true(
+        str_contains($configSource, "'EVENT_DISCLOSURE_MODE' => 'payment_confirmation_only'"),
+        'The application default must remain payment_confirmation_only.'
+    );
+};
+
 $tests['public event options expose configured prices and benefit snapshots'] = static function (): void {
     $options = app_public_event_options('gala-2026');
     test_assert_same('USD', $options['currency']);
+    test_assert_same('benefit_fmv', $options['disclosure_mode']);
     test_assert_same(4, count($options['packages']));
     $byCode = [];
     foreach ($options['packages'] as $package) {
@@ -720,6 +752,18 @@ $tests['public event options expose configured prices and benefit snapshots'] = 
     test_assert_same(10000, $byCode['gala_vip_couple']['max_deductible_cents']);
 };
 
+$tests['public event options expose payment mode with a null tax trio'] = static function (): void {
+    $options = app_public_event_options('golf-2026', 'payment_confirmation_only');
+    test_assert_same('payment_confirmation_only', $options['disclosure_mode']);
+    test_assert_same(6, count($options['packages']));
+    test_assert_same(1, count($options['addons']));
+    foreach (array_merge($options['packages'], $options['addons']) as $option) {
+        test_assert_same(null, $option['benefit_description']);
+        test_assert_same(null, $option['fair_market_value_cents']);
+        test_assert_same(null, $option['max_deductible_cents']);
+    }
+};
+
 $tests['registration fingerprint is stable for retries and changes with registration data'] = static function (): void {
     $validated = app_validate_registration_payload(
         test_registration_input('golf-2026', 'team_sponsor', 4, ['team_mulligans'])
@@ -727,6 +771,13 @@ $tests['registration fingerprint is stable for retries and changes with registra
     $copy = $validated;
     test_assert_same(app_registration_fingerprint($validated), app_registration_fingerprint($copy));
     test_assert_same(32, strlen(app_registration_fingerprint($validated)));
+
+    $changedMode = $validated;
+    $changedMode['disclosure_mode'] = 'payment_confirmation_only';
+    test_assert_false(
+        hash_equals(app_registration_fingerprint($validated), app_registration_fingerprint($changedMode)),
+        'Changing disclosure mode must change the idempotency fingerprint.'
+    );
 
     $changed = $validated;
     $changed['teams'][0]['participants'][0]['name'] = 'A Different Player';
@@ -859,6 +910,7 @@ $tests['persistence contract links event, payer, roster, reference, and Square o
         "':capacity' => \$data['participant_capacity']",
         "':package_quantity' => \$data['package_quantity']",
         "':package_unit_amount' => \$data['package_unit_amount_cents']",
+        "':disclosure_mode' => \$disclosureMode",
         'INSERT INTO registration_teams',
         'INSERT INTO registration_ticket_groups',
         '(registration_id,team_id,ticket_group_id,position,team_position,ticket_group_position,name,created_at)',
@@ -907,6 +959,8 @@ $tests['persistence contract links event, payer, roster, reference, and Square o
         'FOREIGN KEY (registration_id, ticket_group_id)',
         'REFERENCES registration_ticket_groups (registration_id, id)',
         'CONSTRAINT chk_registrations_package_quantity CHECK (package_quantity BETWEEN 1 AND 10)',
+        "disclosure_mode VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'payment_confirmation_only'",
+        'CONSTRAINT chk_registrations_disclosure_values CHECK (',
         'CONSTRAINT chk_participants_roster_link CHECK (',
         'team_id IS NOT NULL AND team_position IS NOT NULL AND team_position BETWEEN 1 AND 4',
         'ticket_group_id IS NOT NULL AND ticket_group_position IS NOT NULL',
@@ -917,6 +971,53 @@ $tests['persistence contract links event, payer, roster, reference, and Square o
             'Database schema is missing linkage: ' . $requiredDatabaseLink
         );
     }
+};
+
+$tests['disclosure persistence, migration, status, and reporting contracts stay coherent'] = static function () use ($siteRoot): void {
+    $files = [
+        'registrations' => file_get_contents($siteRoot . '/app/registrations.php'),
+        'schema' => file_get_contents($siteRoot . '/database/001_event_registrations.sql'),
+        'migration' => file_get_contents($siteRoot . '/database/002_payment_confirmation_only.sql'),
+        'admin' => file_get_contents($siteRoot . '/admin/index.php'),
+        'export' => file_get_contents($siteRoot . '/admin/export.php'),
+    ];
+    foreach ($files as $name => $source) {
+        test_assert_true(is_string($source), 'Could not read ' . $name . ' disclosure source.');
+    }
+
+    foreach ([
+        'amount_cents,currency,disclosure_mode,benefit_description',
+        "'disclosure_mode' => \$data['disclosure_mode']",
+        "'disclosure_mode' => \$disclosureMode",
+        "'benefit_description' => \$benefitDescription",
+        "'fair_market_value_cents' => \$fairMarketValueCents",
+        "'max_deductible_cents' => \$deductibleAmountCents",
+    ] as $fragment) {
+        test_assert_true(str_contains($files['registrations'], $fragment), 'Missing registration disclosure contract: ' . $fragment);
+    }
+    foreach ([
+        'benefit_description VARCHAR(1000) NULL',
+        'fair_market_value_cents INT UNSIGNED NULL',
+        'deductible_amount_cents INT UNSIGNED NULL',
+        "disclosure_mode IN ('payment_confirmation_only', 'benefit_fmv')",
+        "disclosure_mode = 'payment_confirmation_only'",
+        "disclosure_mode = 'benefit_fmv'",
+    ] as $fragment) {
+        test_assert_true(str_contains($files['schema'], $fragment), 'Missing schema disclosure contract: ' . $fragment);
+    }
+    foreach ([
+        "SET disclosure_mode = 'benefit_fmv'",
+        'WHERE disclosure_mode IS NULL',
+        "NOT NULL DEFAULT 'payment_confirmation_only'",
+        'MODIFY benefit_description VARCHAR(1000) NULL',
+        "CONSTRAINT_NAME = 'chk_registrations_disclosure_values'",
+    ] as $fragment) {
+        test_assert_true(str_contains($files['migration'], $fragment), 'Missing migration safety contract: ' . $fragment);
+    }
+    test_assert_true(str_contains($files['admin'], "=== 'benefit_fmv'"));
+    test_assert_true(str_contains($files['export'], "=== 'benefit_fmv'"));
+    test_assert_true(str_contains($files['export'], "'Disclosure mode'"));
+    test_assert_true(substr_count($files['export'], ": ''") >= 3, 'CSV tax values must have blank branches.');
 };
 
 $tests['attendance reporting distinguishes actual attendance from package capacity'] = static function () use ($siteRoot): void {
@@ -1120,6 +1221,59 @@ $tests['registration paid timestamp comes from Square completed_at'] = static fu
     test_assert_true(str_contains($source, 'paid_at = COALESCE(paid_at, ?)'));
     test_assert_false(str_contains($source, 'paid_at = COALESCE(paid_at, UTC_TIMESTAMP(6))'));
     test_assert_true(str_contains($source, '$completedAt = app_square_datetime($storedPayment'));
+};
+
+$tests['payment-only payer email is a detailed non-charitable payment confirmation'] = static function (): void {
+    $validated = app_validate_registration_payload(
+        test_team_registration_input('team_sponsor', [4, 3, 2], [0, 2])
+    );
+    $benefitRegistration = test_email_registration($validated);
+    $registration = $benefitRegistration;
+    $registration['disclosure_mode'] = 'payment_confirmation_only';
+    $registration['benefit_description'] = null;
+    $registration['fair_market_value_cents'] = null;
+    $registration['deductible_amount_cents'] = null;
+    $roster = test_roster_from_validated($validated);
+    $payment = [
+        'id' => 'square-payment-test',
+        'completed_at' => '2026-09-12T18:30:00Z',
+        'receipt_url' => 'https://squareup.com/receipt/preview/test',
+    ];
+
+    $payer = app_build_paid_confirmation_content($registration, $roster, $payment);
+    $heading = 'PAYMENT CONFIRMATION — NOT A CHARITABLE-CONTRIBUTION ACKNOWLEDGMENT';
+    $wording = 'COMEC received $1,280.00 on 2026-09-12 18:30:00 UTC for '
+        . '2026 COMEC Charity Golf Tournament / Team Sponsor / quantity 3. '
+        . 'This payment purchased the selected admissions, entries, and/or listed sponsorship-package benefits. '
+        . 'COMEC has not represented any portion as a deductible charitable contribution. '
+        . 'Consult your tax adviser regarding your own tax treatment.';
+    test_assert_true(str_contains($payer['text'], $heading));
+    test_assert_true(str_contains($payer['html'], $heading));
+    test_assert_true(str_contains($payer['text'], $wording));
+    foreach ([
+        'Event: 2026 COMEC Charity Golf Tournament',
+        'Package: Team Sponsor',
+        'Package quantity: 3',
+        'Team 3: COMEC Champions 3',
+        'Team 3 Golfer 2',
+        'Square receipt: https://squareup.com/receipt/preview/test',
+    ] as $detail) {
+        test_assert_true(str_contains($payer['text'], $detail), 'Payment confirmation omitted: ' . $detail);
+    }
+    foreach (['Quid-pro-quo disclosure', 'Estimated fair market value', 'Maximum amount potentially eligible'] as $taxCopy) {
+        test_assert_false(str_contains($payer['text'], $taxCopy), 'Payment-only email included tax copy: ' . $taxCopy);
+    }
+    test_assert_false(str_contains($payer['text'], 'Payment/contribution date'));
+
+    $paymentStaff = app_build_internal_paid_content($registration, $roster, $payment);
+    $benefitStaff = app_build_internal_paid_content($benefitRegistration, $roster, $payment);
+    test_assert_same($benefitStaff, $paymentStaff, 'Staff paid notifications must remain mode-independent.');
+
+    $invalid = $registration;
+    $invalid['disclosure_mode'] = 'unexpected';
+    test_expect_runtime_exception(
+        static fn (): array => app_build_paid_confirmation_content($invalid, $roster, $payment)
+    );
 };
 
 $tests['paid emails preserve team grouping, per-team add-ons, and aggregate quantities'] = static function (): void {

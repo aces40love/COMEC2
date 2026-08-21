@@ -24,8 +24,7 @@ function app_build_paid_confirmation_content(array $registration, array $roster,
     $reference = (string) $registration['public_reference'];
     $payerName = trim((string) $registration['payer_first_name'] . ' ' . (string) $registration['payer_last_name']);
     $gross = app_format_usd((int) $registration['amount_cents']);
-    $fmv = app_format_usd((int) $registration['fair_market_value_cents']);
-    $deductible = app_format_usd((int) $registration['deductible_amount_cents']);
+    $disclosureMode = app_disclosure_mode_value($registration['disclosure_mode'] ?? null);
     $addons = app_decode_addons((string) $registration['addons_json']);
     $receiptUrl = app_email_receipt_url($payment['receipt_url'] ?? null);
     $paymentId = (string) ($payment['id'] ?? '');
@@ -33,11 +32,14 @@ function app_build_paid_confirmation_content(array $registration, array $roster,
     $subject = $registration['event_name'] . ' registration confirmed - ' . $reference;
     $packageQuantity = max(1, (int) ($registration['package_quantity'] ?? 1));
     $rosterContent = app_email_roster_content($registration, $roster);
+    $dateLabel = $disclosureMode === 'payment_confirmation_only'
+        ? 'Payment date'
+        : 'Payment/contribution date (UTC)';
 
     $text = "Hello {$payerName},\n\nThe Commission on Missing and Exploited Children (COMEC) "
         . "has confirmed your payment for {$registration['event_name']}.\n\n"
         . "Event: {$registration['event_name']}\nEvent date: {$registration['event_date_label']}\n"
-        . "Payer: {$payerName}\nPayment/contribution date (UTC): {$paidAt}\n"
+        . "Payer: {$payerName}\n{$dateLabel}: {$paidAt}\n"
         . "Registration reference: {$reference}\nSquare payment ID: {$paymentId}\n"
         . "Package: {$registration['package_name']}\nPackage quantity: {$packageQuantity}\nGross payment: {$gross}\n";
     foreach ($addons as $addon) {
@@ -47,20 +49,38 @@ function app_build_paid_confirmation_content(array $registration, array $roster,
     if ($receiptUrl !== null) {
         $text .= "Square receipt: {$receiptUrl}\n";
     }
-    $text .= "\nQuid-pro-quo disclosure\n"
-        . "Benefits provided in exchange for this payment: {$registration['benefit_description']}\n"
-        . "Estimated fair market value of benefits: {$fmv}\n"
-        . "Maximum amount potentially eligible for a charitable deduction (gross payment minus FMV): {$deductible}\n"
-        . 'Any charitable deduction is limited to the excess of the gross payment over the fair market value of benefits, '
-        . "subject to applicable law. Please consult your tax adviser.\n\n"
-        . "Keep this confirmation and contact COMEC at 901-222-0700 with registration questions.\n";
+    if ($disclosureMode === 'payment_confirmation_only') {
+        $purchaseDescription = $registration['event_name'] . ' / ' . $registration['package_name']
+            . ' / quantity ' . $packageQuantity;
+        $text .= "\nPAYMENT CONFIRMATION — NOT A CHARITABLE-CONTRIBUTION ACKNOWLEDGMENT\n"
+            . "COMEC received {$gross} on {$paidAt} for {$purchaseDescription}. "
+            . 'This payment purchased the selected admissions, entries, and/or listed sponsorship-package benefits. '
+            . 'COMEC has not represented any portion as a deductible charitable contribution. '
+            . "Consult your tax adviser regarding your own tax treatment.\n\n"
+            . "Keep this confirmation and contact COMEC at 901-222-0700 with registration questions.\n";
+    } else {
+        if ($registration['benefit_description'] === null
+            || $registration['fair_market_value_cents'] === null
+            || $registration['deductible_amount_cents'] === null) {
+            throw new RuntimeException('The benefit/FMV email disclosure snapshot is incomplete.');
+        }
+        $fmv = app_format_usd((int) $registration['fair_market_value_cents']);
+        $deductible = app_format_usd((int) $registration['deductible_amount_cents']);
+        $text .= "\nQuid-pro-quo disclosure\n"
+            . "Benefits provided in exchange for this payment: {$registration['benefit_description']}\n"
+            . "Estimated fair market value of benefits: {$fmv}\n"
+            . "Maximum amount potentially eligible for a charitable deduction (gross payment minus FMV): {$deductible}\n"
+            . 'Any charitable deduction is limited to the excess of the gross payment over the fair market value of benefits, '
+            . "subject to applicable law. Please consult your tax adviser.\n\n"
+            . "Keep this confirmation and contact COMEC at 901-222-0700 with registration questions.\n";
+    }
 
     $html = '<p>Hello ' . app_email_escape($payerName) . ',</p><p>The Commission on Missing and Exploited Children '
         . '(COMEC) has confirmed your payment for ' . app_email_escape((string) $registration['event_name'])
         . '.</p><dl><dt>Event</dt><dd>' . app_email_escape((string) $registration['event_name'])
         . '</dd><dt>Event date</dt><dd>' . app_email_escape((string) $registration['event_date_label'])
         . '</dd><dt>Payer</dt><dd>' . app_email_escape($payerName)
-        . '</dd><dt>Payment/contribution date (UTC)</dt><dd>' . app_email_escape($paidAt)
+        . '</dd><dt>' . app_email_escape($dateLabel) . '</dt><dd>' . app_email_escape($paidAt)
         . '</dd><dt>Registration reference</dt><dd>' . app_email_escape($reference)
         . '</dd><dt>Square payment ID</dt><dd>' . app_email_escape($paymentId)
         . '</dd><dt>Package</dt><dd>' . app_email_escape((string) $registration['package_name'])
@@ -77,13 +97,24 @@ function app_build_paid_confirmation_content(array $registration, array $roster,
     if ($receiptUrl !== null) {
         $html .= '<p><a href="' . app_email_escape($receiptUrl) . '">View your Square receipt</a></p>';
     }
-    $html .= '<h2>Quid-pro-quo disclosure</h2><p>Benefits provided in exchange for this payment: '
-        . app_email_escape((string) $registration['benefit_description']) . '</p><p>Estimated fair market value of benefits: <strong>'
-        . app_email_escape($fmv) . '</strong><br>Maximum amount potentially eligible for a charitable deduction '
-        . '(gross payment minus FMV): <strong>' . app_email_escape($deductible) . '</strong></p>'
-        . '<p>Any charitable deduction is limited to the excess of the gross payment over the fair market value of benefits, '
-        . 'subject to applicable law. Please consult your tax adviser.</p><p>Keep this confirmation and contact COMEC at '
-        . '901-222-0700 with registration questions.</p>';
+    if ($disclosureMode === 'payment_confirmation_only') {
+        $purchaseDescription = $registration['event_name'] . ' / ' . $registration['package_name']
+            . ' / quantity ' . $packageQuantity;
+        $html .= '<h2>PAYMENT CONFIRMATION — NOT A CHARITABLE-CONTRIBUTION ACKNOWLEDGMENT</h2><p>COMEC received '
+            . '<strong>' . app_email_escape($gross) . '</strong> on ' . app_email_escape($paidAt) . ' for '
+            . app_email_escape($purchaseDescription) . '. This payment purchased the selected admissions, entries, '
+            . 'and/or listed sponsorship-package benefits. COMEC has not represented any portion as a deductible '
+            . 'charitable contribution. Consult your tax adviser regarding your own tax treatment.</p>'
+            . '<p>Keep this confirmation and contact COMEC at 901-222-0700 with registration questions.</p>';
+    } else {
+        $html .= '<h2>Quid-pro-quo disclosure</h2><p>Benefits provided in exchange for this payment: '
+            . app_email_escape((string) $registration['benefit_description']) . '</p><p>Estimated fair market value of benefits: <strong>'
+            . app_email_escape($fmv) . '</strong><br>Maximum amount potentially eligible for a charitable deduction '
+            . '(gross payment minus FMV): <strong>' . app_email_escape($deductible) . '</strong></p>'
+            . '<p>Any charitable deduction is limited to the excess of the gross payment over the fair market value of benefits, '
+            . 'subject to applicable law. Please consult your tax adviser.</p><p>Keep this confirmation and contact COMEC at '
+            . '901-222-0700 with registration questions.</p>';
+    }
 
     return ['subject' => $subject, 'text' => $text, 'html' => $html];
 }

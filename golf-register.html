@@ -50,7 +50,7 @@
             <fieldset class="form-section package-selector" aria-describedby="package-help">
               <legend><span class="form-step">1</span> Choose a registration option <span aria-hidden="true">*</span></legend>
               <p class="form-help" id="package-help">Select one package. You will review the price before going to secure checkout.</p>
-              <p class="notice notice--blue" role="status" aria-live="polite" data-config-status>Loading current price and tax information…</p>
+              <p class="notice notice--blue" role="status" aria-live="polite" data-config-status>Loading current price and registration information…</p>
               <div class="package-grid">
                 <label class="package-option">
                   <input type="radio" name="package_code" value="corporate_sponsor" required data-package-radio disabled>
@@ -159,7 +159,7 @@
               <legend><span class="form-step" data-final-step>3</span> Review and continue</legend>
               <div class="form-field"><label for="registration-notes">Notes or requests <span class="optional">Optional</span></label><textarea id="registration-notes" name="notes" rows="4" maxlength="1000" aria-describedby="notes-help"></textarea><small id="notes-help">Use this space for roster updates, accessibility needs, or questions.</small></div>
 
-              <div class="tax-disclosure notice notice--blue" data-tax-disclosure aria-live="polite" aria-busy="true">
+              <div class="tax-disclosure notice notice--blue" data-tax-disclosure aria-live="polite" aria-busy="true" hidden>
                 <h3>Price and tax disclosure</h3>
                 <p data-tax-prompt>Current benefit information must load before checkout can begin.</p>
                 <div data-tax-details hidden>
@@ -171,6 +171,11 @@
                   </dl>
                   <p class="small">The maximum shown is not tax advice or a guarantee of deductibility. Your eligibility may depend on your circumstances; consult a tax adviser if needed.</p>
                 </div>
+              </div>
+
+              <div class="notice notice--blue" data-payment-confirmation-notice hidden>
+                <strong>Purchase and payment confirmation</strong>
+                <p>This checkout is for event admission, team-entry, and sponsorship-package purchases. No charitable contribution is being solicited or acknowledged through this transaction. COMEC does not represent that any portion of the payment is deductible as a charitable contribution. You will receive a payment and registration confirmation.</p>
               </div>
 
               <div class="honeypot" aria-hidden="true"><label for="registration-website">Website</label><input id="registration-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>

@@ -139,6 +139,7 @@ $query = http_build_query(array_filter($filters, static fn (string $value): bool
               $capacity = (int) $registration['participant_capacity'];
               $addons = admin_registration_addons($registration['addons_json'] ?? '');
               $receiptUrl = admin_safe_square_receipt_url($registration['receipt_url'] ?? null);
+              $isBenefitFmv = ($registration['disclosure_mode'] ?? null) === 'benefit_fmv';
             ?>
             <tr>
               <td>
@@ -171,7 +172,9 @@ $query = http_build_query(array_filter($filters, static fn (string $value): bool
                 <?php endif; ?>
                 <strong>Total: <?= admin_h(admin_money((int) $registration['amount_cents'])) ?></strong>
                 <?php if ($registration['contest_choice']): ?><small><?= admin_h(ucwords(str_replace('_', ' ', $registration['contest_choice']))) ?></small><?php endif; ?>
-                <small>Benefits FMV: <?= admin_h(admin_money((int) $registration['fair_market_value_cents'])) ?></small>
+                <?php if ($isBenefitFmv && $registration['fair_market_value_cents'] !== null): ?>
+                  <small>Benefits FMV: <?= admin_h(admin_money((int) $registration['fair_market_value_cents'])) ?></small>
+                <?php endif; ?>
               </td>
               <td>
                 <?php if ($teams === [] && $registration['team_name']): ?><strong><?= admin_h($registration['team_name']) ?></strong><?php endif; ?>

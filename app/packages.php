@@ -478,7 +478,7 @@ function app_validate_registration_payload(array $input): array
         $addonAmountCents += $totalAmountCents;
     }
     $amountCents = $baseAmountCents + $addonAmountCents;
-    $benefit = app_registration_benefit_snapshot(
+    $benefit = app_registration_disclosure_snapshot(
         $packageCode,
         $packageQuantity,
         $addonQuantities,
@@ -499,6 +499,7 @@ function app_validate_registration_payload(array $input): array
         'addons' => $addons,
         'addon_amount_cents' => $addonAmountCents,
         'amount_cents' => $amountCents,
+        'disclosure_mode' => $benefit['mode'],
         'benefit' => $benefit,
         'participant_capacity' => $participantCapacity,
         'payer' => [
@@ -522,6 +523,40 @@ function app_validate_registration_payload(array $input): array
         'teams' => $teams,
         'ticket_groups' => $ticketGroups,
     ];
+}
+
+function app_registration_disclosure_snapshot(
+    string $packageCode,
+    int $packageQuantity,
+    array $addonQuantities,
+    int $grossCents,
+    ?string $mode = null
+): array {
+    $mode = app_disclosure_mode_value($mode ?? app_config('EVENT_DISCLOSURE_MODE'));
+    if ($packageQuantity < 1 || $packageQuantity > 10 || $grossCents < 0) {
+        throw new ApiException(422, 'invalid_registration', 'The registration quantities are invalid.');
+    }
+    foreach ($addonQuantities as $code => $quantity) {
+        if (!is_string($code) || !is_int($quantity) || $quantity < 1 || $quantity > 10) {
+            throw new ApiException(422, 'invalid_registration', 'The registration quantities are invalid.');
+        }
+    }
+
+    if ($mode === 'payment_confirmation_only') {
+        return [
+            'mode' => $mode,
+            'description' => null,
+            'fair_market_value_cents' => null,
+            'deductible_amount_cents' => null,
+        ];
+    }
+
+    return ['mode' => $mode] + app_registration_benefit_snapshot(
+        $packageCode,
+        $packageQuantity,
+        $addonQuantities,
+        $grossCents
+    );
 }
 
 function app_registration_benefit_snapshot(
@@ -588,8 +623,11 @@ function app_registration_benefit_snapshot(
     ];
 }
 
-function app_public_event_options(string $eventCode): array
+function app_public_event_options(string $eventCode, ?string $disclosureMode = null): array
 {
+    $disclosureMode = app_disclosure_mode_value(
+        $disclosureMode ?? app_config('EVENT_DISCLOSURE_MODE')
+    );
     $event = app_event_definitions()[$eventCode] ?? null;
     if ($event === null) {
         throw new ApiException(404, 'event_not_found', 'The event could not be found.');
@@ -598,7 +636,13 @@ function app_public_event_options(string $eventCode): array
     $packages = [];
     $usedAddons = [];
     foreach ($event['packages'] as $code => $package) {
-        $benefit = app_registration_benefit_snapshot($code, 1, [], (int) $package['amount_cents']);
+        $benefit = app_registration_disclosure_snapshot(
+            $code,
+            1,
+            [],
+            (int) $package['amount_cents'],
+            $disclosureMode
+        );
         $packages[] = [
             'code' => $code,
             'name' => $package['name'],
@@ -618,7 +662,13 @@ function app_public_event_options(string $eventCode): array
     $addons = [];
     foreach (array_keys($usedAddons) as $code) {
         $addon = app_registration_addons()[$code];
-        $benefit = app_registration_benefit_snapshot($code, 1, [], (int) $addon['amount_cents']);
+        $benefit = app_registration_disclosure_snapshot(
+            $code,
+            1,
+            [],
+            (int) $addon['amount_cents'],
+            $disclosureMode
+        );
         $addons[] = [
             'code' => $code,
             'name' => $addon['name'],
@@ -635,6 +685,7 @@ function app_public_event_options(string $eventCode): array
         'event_name' => $event['name'],
         'event_date' => $event['date'],
         'currency' => 'USD',
+        'disclosure_mode' => $disclosureMode,
         'packages' => $packages,
         'addons' => $addons,
     ];

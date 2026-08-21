@@ -7,6 +7,7 @@
   const packages = {
     gala_single: {
       name: "Single admission",
+      apiName: "Gala Single Ticket",
       includes: "One attendee per ticket",
       amountCents: 13500,
       participantMin: 1,
@@ -16,6 +17,7 @@
     },
     gala_couple: {
       name: "Couple admission",
+      apiName: "Gala Couple Tickets",
       includes: "Up to two attendees per couple package",
       amountCents: 25000,
       participantMin: 1,
@@ -25,6 +27,7 @@
     },
     gala_vip_single: {
       name: "VIP single admission",
+      apiName: "Gala VIP Single Ticket",
       includes: "VIP admission for one attendee per ticket",
       amountCents: 17500,
       participantMin: 1,
@@ -34,6 +37,7 @@
     },
     gala_vip_couple: {
       name: "VIP couple admission",
+      apiName: "Gala VIP Couple Tickets",
       includes: "VIP admission for up to two attendees per couple package",
       amountCents: 30000,
       participantMin: 1,
@@ -68,6 +72,7 @@
   const benefitDescription = form.querySelector("[data-benefit-description]");
   const fairMarketValue = form.querySelector("[data-fair-market-value]");
   const maximumDeductible = form.querySelector("[data-maximum-deductible]");
+  const paymentConfirmationNotice = form.querySelector("[data-payment-confirmation-notice]");
 
   const money = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -77,10 +82,13 @@
   });
   const idempotencyKey = createIdempotencyKey();
   const requestedPackage = new URLSearchParams(window.location.search).get("package");
+  const benefitFmvMode = "benefit_fmv";
+  const paymentConfirmationMode = "payment_confirmation_only";
   const statesByKind = { single: [], couple: [] };
   const quantityByKind = { single: "", couple: "" };
   let configurationReady = false;
   let reviewOnly = false;
+  let disclosureMode = "";
   let activeKind = "";
 
   function createIdempotencyKey() {
@@ -322,6 +330,7 @@
       summaryCalculation.textContent = "—";
       summaryPrice.textContent = "—";
       taxDisclosure.hidden = true;
+      paymentConfirmationNotice.hidden = !(configurationReady && disclosureMode === paymentConfirmationMode);
       return;
     }
 
@@ -341,13 +350,18 @@
       summaryPrice.textContent = "—";
     }
 
-    if (config && metrics.quantity) {
+    if (configurationReady && disclosureMode === paymentConfirmationMode) {
+      taxDisclosure.hidden = true;
+      paymentConfirmationNotice.hidden = false;
+    } else if (config && metrics.quantity) {
       taxDisclosure.hidden = false;
+      paymentConfirmationNotice.hidden = true;
       benefitDescription.textContent = (metrics.quantity > 1 ? metrics.quantity + " × " : "") + config.benefit_description;
       fairMarketValue.textContent = money.format((config.fair_market_value_cents * metrics.quantity) / 100);
       maximumDeductible.textContent = money.format((config.max_deductible_cents * metrics.quantity) / 100);
     } else {
       taxDisclosure.hidden = true;
+      paymentConfirmationNotice.hidden = true;
     }
   }
 
@@ -381,13 +395,31 @@
     updateSummary(selected);
   }
 
-  function validPublicPackage(item, code, participantMin, participantMax) {
+  function hasNullTaxFields(item) {
     return item
+      && item.benefit_description === null
+      && item.fair_market_value_cents === null
+      && item.max_deductible_cents === null;
+  }
+
+  function validPublicPackage(item, code, packageData, mode) {
+    if (mode === paymentConfirmationMode) {
+      return item
+        && item.code === code
+        && item.name === packageData.apiName
+        && item.amount_cents === packageData.amountCents
+        && item.participant_min === packageData.participantMin
+        && item.participant_max === packageData.participantMax
+        && Array.isArray(item.allowed_addons) && item.allowed_addons.length === 0
+        && hasNullTaxFields(item);
+    }
+    return mode === benefitFmvMode
+      && item
       && item.code === code
       && typeof item.name === "string" && Boolean(item.name.trim())
       && Number.isInteger(item.amount_cents) && item.amount_cents > 0
-      && item.participant_min === participantMin
-      && item.participant_max === participantMax
+      && item.participant_min === packageData.participantMin
+      && item.participant_max === packageData.participantMax
       && Array.isArray(item.allowed_addons) && item.allowed_addons.length === 0
       && typeof item.benefit_description === "string" && Boolean(item.benefit_description.trim())
       && Number.isInteger(item.fair_market_value_cents) && item.fair_market_value_cents >= 0
@@ -396,14 +428,22 @@
   }
 
   function installPublicConfiguration(data) {
-    if (!data || data.ok !== true || data.event_code !== "gala-2026" || data.currency !== "USD" || !Array.isArray(data.packages)) {
+    const mode = data && data.disclosure_mode;
+    if (!data
+        || data.ok !== true
+        || (mode !== paymentConfirmationMode && mode !== benefitFmvMode)
+        || data.event_code !== "gala-2026"
+        || data.currency !== "USD"
+        || !Array.isArray(data.packages)
+        || (mode === paymentConfirmationMode
+          && (!Array.isArray(data.addons) || data.addons.length !== 0 || data.packages.length !== Object.keys(packages).length))) {
       throw new Error("The admission configuration is incomplete.");
     }
     const validated = {};
     Object.keys(packages).forEach(function (code) {
       const item = data.packages.find(function (candidate) { return candidate && candidate.code === code; });
       const packageData = packages[code];
-      if (!validPublicPackage(item, code, packageData.participantMin, packageData.participantMax)) {
+      if (!validPublicPackage(item, code, packageData, mode)) {
         throw new Error("The admission configuration is incomplete.");
       }
       validated[code] = item;
@@ -418,6 +458,7 @@
       if (nameNode) nameNode.textContent = item.name.trim();
       if (priceNode) priceNode.textContent = money.format(item.amount_cents / 100);
     });
+    disclosureMode = mode;
   }
 
   async function loadPublicConfiguration() {
@@ -450,12 +491,14 @@
       const copy = unavailableCopy();
       configurationReady = false;
       reviewOnly = true;
+      disclosureMode = "";
       configStatus.hidden = false;
       configStatus.classList.remove("form-alert--error");
       configStatus.setAttribute("role", "status");
       configStatus.textContent = copy.status;
       submitLabel.textContent = copy.button;
       submitButton.disabled = true;
+      paymentConfirmationNotice.hidden = true;
       updatePackage();
     } finally {
       window.clearTimeout(timeout);

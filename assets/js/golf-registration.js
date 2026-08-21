@@ -7,6 +7,7 @@
   const packages = {
     corporate_sponsor: {
       name: "Corporate sponsor",
+      apiName: "Corporate Sponsor",
       price: null,
       previewPrice: 100000,
       includes: "Four-player team with cart and a hole sign",
@@ -17,6 +18,7 @@
     },
     contest_sponsor: {
       name: "Contest sponsor",
+      apiName: "Contest Sponsor",
       price: null,
       previewPrice: 50000,
       includes: "Signage for one tournament contest",
@@ -27,6 +29,7 @@
     },
     drink_cart_sponsor: {
       name: "Drink-cart sponsor",
+      apiName: "Drink-Cart Sponsor",
       price: null,
       previewPrice: 50000,
       includes: "Recognition on the tournament drink cart",
@@ -36,6 +39,7 @@
     },
     team_sponsor: {
       name: "Team sponsor",
+      apiName: "Team Sponsor",
       price: null,
       previewPrice: 40000,
       includes: "Four-player team with cart",
@@ -46,6 +50,7 @@
     },
     hole_sponsor: {
       name: "Hole sponsor",
+      apiName: "Hole Sponsor",
       price: null,
       previewPrice: 25000,
       includes: "Recognition with signage at one hole",
@@ -55,6 +60,7 @@
     },
     individual_player: {
       name: "Individual player",
+      apiName: "Individual Player (Advance Registration)",
       price: null,
       previewPrice: 10000,
       includes: "Advance registration for one player",
@@ -66,7 +72,7 @@
 
   const previewMulliganConfig = {
     code: "team_mulligans",
-    name: "Eight team mulligans",
+    name: "Eight Team Mulligans",
     price: 4000,
     includes: "Eight team mulligans"
   };
@@ -117,6 +123,7 @@
   const taxPayment = form.querySelector("[data-tax-payment]");
   const taxFmv = form.querySelector("[data-tax-fmv]");
   const taxDeductible = form.querySelector("[data-tax-deductible]");
+  const paymentConfirmationNotice = form.querySelector("[data-payment-confirmation-notice]");
 
   const money = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -125,8 +132,11 @@
   });
   const idempotencyKey = createIdempotencyKey();
   const requestedPackage = new URLSearchParams(window.location.search).get("package");
+  const benefitFmvMode = "benefit_fmv";
+  const paymentConfirmationMode = "payment_confirmation_only";
   let publicConfigLoaded = false;
   let previewMode = false;
+  let disclosureMode = "";
   let mulliganConfig = null;
   let individualManualPlayerValue = "";
   const teamStates = [];
@@ -160,8 +170,39 @@
       && option.max_deductible_cents === Math.max(0, option.amount_cents - option.fair_market_value_cents);
   }
 
-  function validPackageOption(option, packageData) {
-    if (!validBenefitOption(option)
+  function hasNullTaxFields(option) {
+    return option
+      && option.benefit_description === null
+      && option.fair_market_value_cents === null
+      && option.max_deductible_cents === null;
+  }
+
+  function exactStringList(value, expected) {
+    return Array.isArray(value)
+      && value.length === expected.length
+      && value.every(function (item, index) { return item === expected[index]; });
+  }
+
+  function validPaymentPackageOption(option, code, packageData) {
+    const expectedMin = packageData.team || packageData.individual ? 1 : 0;
+    const expectedMax = packageData.team ? 4 : packageData.individual ? 1 : 0;
+    const expectedAddons = packageData.team ? ["team_mulligans"] : [];
+    return option
+      && option.code === code
+      && option.name === packageData.apiName
+      && option.amount_cents === packageData.previewPrice
+      && option.participant_min === expectedMin
+      && option.participant_max === expectedMax
+      && exactStringList(option.allowed_addons, expectedAddons)
+      && hasNullTaxFields(option);
+  }
+
+  function validPackageOption(option, code, packageData, mode) {
+    if (mode === paymentConfirmationMode) {
+      return validPaymentPackageOption(option, code, packageData);
+    }
+    if (mode !== benefitFmvMode
+        || !validBenefitOption(option)
         || !Array.isArray(option.allowed_addons)
         || !Number.isInteger(option.participant_min)
         || !Number.isInteger(option.participant_max)) return false;
@@ -170,6 +211,14 @@
     const rangeMatches = option.participant_min === expectedMin && option.participant_max === expectedMax;
     const teamAddonConfigured = !packageData.team || option.allowed_addons.includes("team_mulligans");
     return rangeMatches && teamAddonConfigured;
+  }
+
+  function validPaymentAddon(option) {
+    return option
+      && option.code === previewMulliganConfig.code
+      && option.name === previewMulliganConfig.name
+      && option.amount_cents === previewMulliganConfig.price
+      && hasNullTaxFields(option);
   }
 
   function updatePackageCard(code) {
@@ -238,6 +287,7 @@
     const status = detail ? copy.status + " " + detail : copy.status;
     publicConfigLoaded = false;
     previewMode = true;
+    disclosureMode = "";
     Object.keys(packages).forEach(function (code) {
       const packageData = packages[code];
       packageData.price = packageData.previewPrice;
@@ -251,10 +301,12 @@
     submitLabel.textContent = copy.button;
     form.setAttribute("aria-busy", "false");
     configStatus.textContent = status;
+    taxDisclosure.hidden = false;
     taxDisclosure.setAttribute("aria-busy", "false");
     taxPrompt.hidden = false;
     taxPrompt.textContent = status;
     taxDetails.hidden = true;
+    paymentConfirmationNotice.hidden = true;
     clearError();
     applyRequestedPackage();
     updatePackage();
@@ -298,7 +350,9 @@
       return;
     }
 
-    if (data.event_code !== "golf-2026"
+    const mode = data.disclosure_mode;
+    if ((mode !== paymentConfirmationMode && mode !== benefitFmvMode)
+        || data.event_code !== "golf-2026"
         || data.currency !== "USD"
         || !Array.isArray(data.packages)
         || !Array.isArray(data.addons)) {
@@ -307,9 +361,14 @@
     }
 
     const packageOptions = {};
+    if (mode === paymentConfirmationMode
+        && (data.packages.length !== Object.keys(packages).length || data.addons.length !== 1)) {
+      failPublicConfig("Current registration options could not be verified. Online checkout is unavailable; please call 901-222-0700.");
+      return;
+    }
     for (const code of Object.keys(packages)) {
       const option = data.packages.find(function (item) { return item && item.code === code; });
-      if (!validPackageOption(option, packages[code])) {
+      if (!validPackageOption(option, code, packages[code], mode)) {
         failPublicConfig("A required package benefit, attendance, or tax value is not configured. Online checkout is unavailable; please call 901-222-0700.");
         return;
       }
@@ -317,7 +376,7 @@
     }
 
     const addon = data.addons.find(function (item) { return item && item.code === "team_mulligans"; });
-    if (!validBenefitOption(addon)) {
+    if (mode === paymentConfirmationMode ? !validPaymentAddon(addon) : !validBenefitOption(addon)) {
       failPublicConfig("The team mulligan benefit or tax value is not configured. Online checkout is unavailable; please call 901-222-0700.");
       return;
     }
@@ -327,9 +386,11 @@
       const packageData = packages[code];
       packageData.name = option.name.trim();
       packageData.price = option.amount_cents;
-      packageData.includes = option.benefit_description.trim();
-      packageData.fairMarketValue = option.fair_market_value_cents;
-      packageData.maxDeductible = option.max_deductible_cents;
+      if (mode === benefitFmvMode) {
+        packageData.includes = option.benefit_description.trim();
+        packageData.fairMarketValue = option.fair_market_value_cents;
+        packageData.maxDeductible = option.max_deductible_cents;
+      }
       packageData.participantMin = option.participant_min;
       packageData.participantMax = option.participant_max;
       packageData.allowedAddons = option.allowed_addons.slice();
@@ -340,20 +401,25 @@
       code: "team_mulligans",
       name: addon.name.trim(),
       price: addon.amount_cents,
-      includes: addon.benefit_description.trim(),
-      fairMarketValue: addon.fair_market_value_cents,
-      maxDeductible: addon.max_deductible_cents
+      includes: mode === benefitFmvMode ? addon.benefit_description.trim() : previewMulliganConfig.includes,
+      fairMarketValue: mode === benefitFmvMode ? addon.fair_market_value_cents : null,
+      maxDeductible: mode === benefitFmvMode ? addon.max_deductible_cents : null
     };
     updateTeamMulliganLabels();
 
     previewMode = false;
     publicConfigLoaded = true;
+    disclosureMode = mode;
     packageRadios.forEach(function (radio) { radio.disabled = false; });
     submitButton.disabled = false;
     submitLabel.textContent = "Continue to secure payment";
     form.setAttribute("aria-busy", "false");
-    configStatus.textContent = "Current price and benefit information loaded.";
+    configStatus.textContent = mode === paymentConfirmationMode
+      ? "Current price and registration information loaded."
+      : "Current price and benefit information loaded.";
+    taxDisclosure.hidden = mode === paymentConfirmationMode;
     taxDisclosure.setAttribute("aria-busy", "false");
+    paymentConfirmationNotice.hidden = mode !== paymentConfirmationMode;
     clearError();
     applyRequestedPackage();
     updatePackage();
@@ -580,6 +646,13 @@
   }
 
   function updateTaxDisclosure(selected, teamTotal, mulliganTeams) {
+    if (publicConfigLoaded && disclosureMode === paymentConfirmationMode) {
+      taxDisclosure.hidden = true;
+      paymentConfirmationNotice.hidden = false;
+      return;
+    }
+    taxDisclosure.hidden = false;
+    paymentConfirmationNotice.hidden = true;
     taxDisclosure.setAttribute("aria-busy", String(!displayConfigReady()));
     if (previewMode) {
       taxPrompt.hidden = false;

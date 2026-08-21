@@ -61,6 +61,7 @@ function app_config(?string $key = null, mixed $default = null): mixed
             'SQUARE_WEBHOOK_SIGNATURE_KEY' => '',
             'SQUARE_WEBHOOK_NOTIFICATION_URL' => '',
             'SQUARE_CATALOG_VARIATIONS' => [],
+            'EVENT_DISCLOSURE_MODE' => 'payment_confirmation_only',
             'PACKAGE_BENEFITS' => [],
             'CHECKOUT_RETURN_URL' => '',
             'WEBHOOK_MAX_ATTEMPTS' => 12,
@@ -96,7 +97,7 @@ function app_config(?string $key = null, mixed $default = null): mixed
             'DB_DSN', 'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD',
             'SQUARE_ENVIRONMENT', 'SQUARE_API_VERSION', 'SQUARE_ACCESS_TOKEN',
             'SQUARE_LOCATION_ID', 'SQUARE_MERCHANT_ID', 'SQUARE_WEBHOOK_SIGNATURE_KEY',
-            'SQUARE_WEBHOOK_NOTIFICATION_URL', 'CHECKOUT_RETURN_URL',
+            'SQUARE_WEBHOOK_NOTIFICATION_URL', 'EVENT_DISCLOSURE_MODE', 'CHECKOUT_RETURN_URL',
             'ADMIN_USERNAME', 'ADMIN_PASSWORD_HASH', 'MAIL_TRANSPORT',
             'MAIL_FROM_EMAIL', 'MAIL_FROM_NAME', 'MAIL_REPLY_TO', 'MAIL_SMTP_HOST',
             'MAIL_SMTP_ENCRYPTION', 'MAIL_SMTP_USERNAME', 'MAIL_SMTP_PASSWORD',
@@ -108,6 +109,8 @@ function app_config(?string $key = null, mixed $default = null): mixed
                 $config[$envKey] = trim((string) $value);
             }
         }
+
+        $config['EVENT_DISCLOSURE_MODE'] = app_disclosure_mode_value($config['EVENT_DISCLOSURE_MODE']);
 
         foreach ([
             'DB_PORT', 'REGISTRATION_RATE_LIMIT', 'REGISTRATION_RATE_WINDOW_SECONDS',
@@ -182,6 +185,17 @@ function app_config(?string $key = null, mixed $default = null): mixed
     }
 
     return array_key_exists($key, $config) ? $config[$key] : $default;
+}
+
+function app_disclosure_mode_value(mixed $value): string
+{
+    if (!is_string($value) || !in_array($value, ['payment_confirmation_only', 'benefit_fmv'], true)) {
+        throw new RuntimeException(
+            'EVENT_DISCLOSURE_MODE must be exactly payment_confirmation_only or benefit_fmv.'
+        );
+    }
+
+    return $value;
 }
 
 function app_path_is_within(string $path, string $directory): bool

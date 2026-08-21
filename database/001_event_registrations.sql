@@ -18,9 +18,10 @@ CREATE TABLE registrations (
     addons_json TEXT NOT NULL,
     amount_cents INT UNSIGNED NOT NULL,
     currency CHAR(3) NOT NULL,
-    benefit_description VARCHAR(1000) NOT NULL,
-    fair_market_value_cents INT UNSIGNED NOT NULL,
-    deductible_amount_cents INT UNSIGNED NOT NULL,
+    disclosure_mode VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'payment_confirmation_only',
+    benefit_description VARCHAR(1000) NULL,
+    fair_market_value_cents INT UNSIGNED NULL,
+    deductible_amount_cents INT UNSIGNED NULL,
     participant_capacity TINYINT UNSIGNED NOT NULL DEFAULT 0,
     payer_first_name VARCHAR(80) NOT NULL,
     payer_last_name VARCHAR(80) NOT NULL,
@@ -58,7 +59,24 @@ CREATE TABLE registrations (
     KEY idx_registrations_event_status (event_code, status),
     KEY idx_registrations_created (created_at),
     CONSTRAINT chk_registrations_package_quantity CHECK (package_quantity BETWEEN 1 AND 10),
-    CONSTRAINT chk_registrations_participant_capacity CHECK (participant_capacity BETWEEN 0 AND 40)
+    CONSTRAINT chk_registrations_participant_capacity CHECK (participant_capacity BETWEEN 0 AND 40),
+    CONSTRAINT chk_registrations_disclosure_mode CHECK (
+        disclosure_mode IN ('payment_confirmation_only', 'benefit_fmv')
+    ),
+    CONSTRAINT chk_registrations_disclosure_values CHECK (
+        (
+            disclosure_mode = 'payment_confirmation_only'
+            AND benefit_description IS NULL
+            AND fair_market_value_cents IS NULL
+            AND deductible_amount_cents IS NULL
+        )
+        OR (
+            disclosure_mode = 'benefit_fmv'
+            AND benefit_description IS NOT NULL
+            AND fair_market_value_cents IS NOT NULL
+            AND deductible_amount_cents IS NOT NULL
+        )
+    )
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE registration_teams (

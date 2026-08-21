@@ -11,7 +11,7 @@ COMEC form -> pending registration -> Square-hosted checkout
           -> private dashboard and CSV roster/export
 ```
 
-The COMEC form stores event and roster information, but it never collects or stores card numbers. Square handles card entry. After Square confirms a completed payment, COMEC reliably sends a detailed payment/event confirmation containing the package and participant information; Square may also send its processor receipt depending on the buyer's receipt settings.
+The COMEC form stores event and roster information, but it never collects or stores card numbers. Square handles card entry. After Square confirms a completed payment, COMEC reliably sends a detailed payment/event confirmation containing the package and participant information; Square may also send its processor receipt depending on the buyer's receipt settings. In the default mode, COMEC's message is expressly a payment confirmation and not a charitable-contribution acknowledgment.
 
 ### Event categories
 
@@ -29,7 +29,7 @@ The COMEC form stores event and roster information, but it never collects or sto
 | `gala-2026` | VIP single | $175 per ticket group | 1-10 groups; exactly 1 named guest per group |
 | `gala-2026` | VIP couple | $300 per couple group | 1-10 groups; 1-2 named guests per group; capacity 2 each |
 
-Every record snapshots its event, package, unit price, quantity, total package price, aggregate add-ons, included capacity, payer, mailing address, player/guest names, payment identifiers, and tax-disclosure values. Payer/receipt information is kept separate from the people attending. The number attending is represented by the number of saved participant rows; `participant_capacity` is the package's included maximum, not a count of missing names. Each couple group allows one or two named attendees while retaining a capacity snapshot of two; each single-ticket group requires exactly one name; each golf team requires one through four names and contributes four places to the registration capacity; sponsorship-only golf packages accept no player names.
+Every record snapshots its event, package, unit price, quantity, total package price, aggregate add-ons, included capacity, payer, mailing address, player/guest names, payment identifiers, and `disclosure_mode`. Tax-disclosure values are populated only in `benefit_fmv` mode and remain null in `payment_confirmation_only` mode. Payer/receipt information is kept separate from the people attending. The number attending is represented by the number of saved participant rows; `participant_capacity` is the package's included maximum, not a count of missing names. Each couple group allows one or two named attendees while retaining a capacity snapshot of two; each single-ticket group requires exactly one name; each golf team requires one through four names and contributes four places to the registration capacity; sponsorship-only golf packages accept no player names.
 
 Multi-team golf registrations use canonical ordered `teams` data. Each team has its own required name, ordered golfer list, and optional mulligan selection. The registration stores `package_quantity`, `package_unit_amount_cents`, and the total `base_amount_cents`. Aggregate add-on snapshots store unit price, quantity, and total, while relational `registration_teams` and `participants` rows preserve team and player order. Top-level participants, add-ons, and the deprecated single `team_name` field are rejected for team packages so a roster cannot be ambiguously split between structures.
 
@@ -41,7 +41,7 @@ Gala registrations use canonical ordered `ticket_groups` data. Each group contai
 
 Backend consumers load the normalized roster through `app_load_registration_roster()`. It returns three keys: `teams`, `ticket_groups`, and `participants`. Each team has `position`, `name`, `participant_capacity`, `addons`, and ordered `participants`; each ticket group has `position`, `participant_capacity`, and ordered `participants`; the separate top-level `participants` list contains only flat non-team/non-ticket-group attendees such as an individual golfer. Each nested participant has `position` and `name`. The private status response uses this same grouped shape and also exposes `package_quantity`.
 
-Package and add-on benefit descriptions and fair-market values are multiplied by their verified quantities. For example, a three-team purchase with mulligans for two teams snapshots readable `3 × …; 2 × …` benefit text, while three VIP couple groups snapshot `3 × …`; both store the corresponding aggregate FMV and maximum potentially deductible excess.
+In optional `benefit_fmv` mode, package and add-on benefit descriptions and fair-market values are multiplied by their verified quantities. For example, a three-team purchase with mulligans for two teams snapshots readable `3 × …; 2 × …` benefit text, while three VIP couple groups snapshot `3 × …`; both store the corresponding aggregate FMV and maximum potentially deductible excess. The default `payment_confirmation_only` mode performs checkout without those values and stores all three tax fields as null.
 
 The registration row carries the authoritative `event_code`, package, public reference, payer, and Square order ID. Each named attendee is linked to that registration by its database ID, and each verified Square payment is linked to the same registration. This is what keeps golf and gala payments and rosters separately identifiable in the dashboard, CSV export, and notification emails.
 
@@ -52,7 +52,7 @@ The current gala flyer also lists Platinum ($7,500), Gold ($5,500), Silver ($3,5
 Only a canonically verified Square `COMPLETED` payment is treated as paid.
 
 - Square may email its processor receipt to the payer, depending on buyer settings.
-- COMEC emails the payer the reliable detailed payment/event confirmation and acknowledgment.
+- COMEC emails the payer a reliable detailed payment/event confirmation. In the default mode it states: `PAYMENT CONFIRMATION — NOT A CHARITABLE-CONTRIBUTION ACKNOWLEDGMENT`.
 - COMEC separately emails each of these staff recipients:
   - `pboals77@yahoo.com`
   - `comecnonprofit@gmail.com`
@@ -69,15 +69,20 @@ The staff message identifies the event, payer, company, contact information, mai
 5. Square sandbox access token, location ID, merchant ID, webhook signature key, and exact notification URL.
 6. A sender address plus either the hosting account's PHP mail service or SMTP credentials.
 7. A private dashboard username and a password hash generated with PHP `password_hash()`.
-8. CPA-approved benefit descriptions and good-faith fair-market values for every package and the mulligan add-on.
+8. Only when using `benefit_fmv`: CPA-approved benefit descriptions and good-faith fair-market values for every package and the mulligan add-on.
 
 Do not put credentials in this repository, the public website folder, email, or browser JavaScript. `COMEC_CONFIG_FILE` must point to the private configuration file outside the web root.
 
-## Tax acknowledgment launch gate
+## Disclosure modes
 
-The example configuration intentionally uses blank descriptions and `null` fair-market values. Checkout must remain disabled until COMEC's CPA or tax adviser approves every value.
+`EVENT_DISCLOSURE_MODE` accepts exactly two values. Any other value fails closed:
 
-Once configured, the selected package's gross price, benefits, fair-market value, and maximum potentially deductible excess are shown before checkout and snapshotted with the registration. The COMEC confirmation repeats that disclosure. Square's card receipt alone is not a charitable acknowledgment.
+- `payment_confirmation_only` is the default. Checkout is available without benefit/FMV configuration. The payer receives event, package, quantity, roster, amount, Square payment ID, and receipt details plus conservative wording that COMEC has not represented any portion as a deductible charitable contribution. `benefit_description`, `fair_market_value_cents`, and `deductible_amount_cents` are null.
+- `benefit_fmv` preserves the original quid-pro-quo workflow. Checkout fails closed until every selected package/add-on has a CPA-approved description and FMV, and the three tax fields are snapshotted on the registration.
+
+The event-options API returns the selected `disclosure_mode` at the top level. Its package/add-on tax trio is null in payment-confirmation mode and populated in benefit/FMV mode. Square's card receipt alone is not a charitable acknowledgment.
+
+For a new database, run `database/001_event_registrations.sql`. For an existing installation created with the earlier schema, run `database/002_payment_confirmation_only.sql` once before deploying this application version. The migration is resumable/idempotent: it labels existing rows `benefit_fmv`, preserves their snapshots, makes the tax trio nullable, and installs mode/value consistency checks. New rows explicitly persist their mode.
 
 ## Square setup
 
@@ -105,7 +110,7 @@ Both workers exit nonzero whenever their queue contains a terminally failed item
 
 ## Staff dashboard
 
-The private dashboard is at `/admin/` after deployment. It supports event, status, package, and text filters plus a CSV export. The export includes payer/contact/address information, packages/add-ons, rosters, payment IDs, refunds, and tax-value snapshots.
+The private dashboard is at `/admin/` after deployment. It supports event, status, package, and text filters plus a CSV export. The export includes payer/contact/address information, packages/add-ons, rosters, payment IDs, refunds, and the disclosure mode. Tax-value cells are blank for payment-confirmation-only registrations and populated only for benefit/FMV registrations.
 
 The dashboard contains personal information. Use a unique password, HTTPS, least-privilege staff access, and approved storage for downloaded CSV files.
 

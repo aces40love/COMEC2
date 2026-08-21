@@ -8,6 +8,25 @@ require_once __DIR__ . '/square.php';
 function app_create_registration(PDO $pdo, array $data, string $clientKey): array
 {
     app_require_config(['APP_URL', 'APP_KEY', 'SQUARE_ACCESS_TOKEN', 'SQUARE_LOCATION_ID']);
+    $disclosureMode = app_disclosure_mode_value($data['disclosure_mode'] ?? null);
+    $benefit = $data['benefit'] ?? null;
+    if (!is_array($benefit) || ($benefit['mode'] ?? null) !== $disclosureMode) {
+        throw new RuntimeException('The registration disclosure snapshot is invalid.');
+    }
+    $taxValues = [
+        $benefit['description'] ?? null,
+        $benefit['fair_market_value_cents'] ?? null,
+        $benefit['deductible_amount_cents'] ?? null,
+    ];
+    if ($disclosureMode === 'payment_confirmation_only'
+        && array_filter($taxValues, static fn (mixed $value): bool => $value !== null) !== []) {
+        throw new RuntimeException('Payment-confirmation registrations cannot store tax-disclosure values.');
+    }
+    if ($disclosureMode === 'benefit_fmv'
+        && (!is_string($taxValues[0]) || trim($taxValues[0]) === ''
+            || !is_int($taxValues[1]) || !is_int($taxValues[2]))) {
+        throw new RuntimeException('The benefit/FMV disclosure snapshot is incomplete.');
+    }
     if (!preg_match('/^[A-Za-z0-9._:-]{16,100}$/', $clientKey)) {
         throw new ApiException(400, 'invalid_idempotency_key', 'A valid Idempotency-Key header is required.');
     }
@@ -22,7 +41,8 @@ function app_create_registration(PDO $pdo, array $data, string $clientKey): arra
         $squareIdempotency = app_uuid_v4();
         try {
             $id = app_transaction($pdo, static function (PDO $pdo) use (
-                $data, $reference, $squareIdempotency, $statusToken, $clientHash, $fingerprint
+                $data, $reference, $squareIdempotency, $statusToken, $clientHash, $fingerprint,
+                $disclosureMode
             ): int {
                 $payer = $data['payer'];
                 $details = $data['registration'];
@@ -41,14 +61,14 @@ function app_create_registration(PDO $pdo, array $data, string $clientKey): arra
                     . '(public_reference,status_token_hash,client_idempotency_hash,request_fingerprint,event_code,event_name,'
                     . 'event_date_label,package_code,package_name,package_quantity,package_unit_amount_cents,'
                     . 'base_amount_cents,addon_amount_cents,addons_json,'
-                    . 'amount_cents,currency,benefit_description,fair_market_value_cents,deductible_amount_cents,'
+                    . 'amount_cents,currency,disclosure_mode,benefit_description,fair_market_value_cents,deductible_amount_cents,'
                     . 'participant_capacity,payer_first_name,payer_last_name,payer_company,payer_email,payer_phone,'
                     . 'payer_address_line1,payer_city,payer_state,payer_postal_code,team_name,sponsor_display,contest_choice,'
                     . 'notes,status,consent_at,consent_ip_hash,terms_version,square_idempotency_key,square_location_id,'
                     . 'created_at,updated_at) VALUES '
                     . '(:ref,:token_hash,:client_hash,:fingerprint,:event_code,:event_name,:event_date,:package_code,'
                     . ':package_name,:package_quantity,:package_unit_amount,:base_amount,:addon_amount,:addons_json,'
-                    . ':amount,:currency,:benefit,:fmv,:deductible,'
+                    . ':amount,:currency,:disclosure_mode,:benefit,:fmv,:deductible,'
                     . ':capacity,:first,:last,:company,:email,:phone,:address,:city,:state,:postal,:team,:sponsor,:contest,'
                     . ':notes,:status,UTC_TIMESTAMP(6),:consent_ip,:terms,:square_key,:location,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))';
                 $statement = $pdo->prepare($sql);
@@ -63,6 +83,7 @@ function app_create_registration(PDO $pdo, array $data, string $clientKey): arra
                     ':addon_amount' => $data['addon_amount_cents'],
                     ':addons_json' => json_encode($addons, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
                     ':amount' => $data['amount_cents'], ':currency' => 'USD',
+                    ':disclosure_mode' => $disclosureMode,
                     ':benefit' => $benefit['description'], ':fmv' => $benefit['fair_market_value_cents'],
                     ':deductible' => $benefit['deductible_amount_cents'],
                     ':capacity' => $data['participant_capacity'], ':first' => $payer['first_name'],
@@ -249,6 +270,7 @@ function app_registration_fingerprint(array $data): string
 {
     return hash('sha256', json_encode([
         'event_code' => $data['event_code'], 'package_code' => $data['package_code'],
+        'disclosure_mode' => $data['disclosure_mode'],
         'addons' => $data['addons'], 'payer' => $data['payer'],
         'registration' => $data['registration'], 'participants' => $data['participants'],
         'teams' => $data['teams'], 'ticket_groups' => $data['ticket_groups'],
@@ -271,7 +293,7 @@ function app_registration_status(PDO $pdo, string $token): array
     }
     $sql = 'SELECT r.id,r.public_reference,r.status,r.event_code,r.event_name,r.event_date_label,r.package_code,r.package_name,'
         . 'r.package_quantity,'
-        . 'r.addons_json,r.amount_cents,r.currency,r.benefit_description,r.fair_market_value_cents,'
+        . 'r.addons_json,r.amount_cents,r.currency,r.disclosure_mode,r.benefit_description,r.fair_market_value_cents,'
         . 'r.deductible_amount_cents,r.participant_capacity,r.payer_first_name,r.payer_last_name,r.payer_email,'
         . '(SELECT p.receipt_url FROM payments p WHERE p.registration_id=r.id AND p.receipt_url IS NOT NULL '
         . 'ORDER BY p.completed_at DESC,p.id DESC LIMIT 1) AS receipt_url '
@@ -284,6 +306,19 @@ function app_registration_status(PDO $pdo, string $token): array
         throw new ApiException(404, 'registration_not_found', 'The registration could not be found.');
     }
     $roster = app_load_registration_roster($pdo, (int) $row['id']);
+    $disclosureMode = app_disclosure_mode_value($row['disclosure_mode'] ?? null);
+    $benefitDescription = null;
+    $fairMarketValueCents = null;
+    $deductibleAmountCents = null;
+    if ($disclosureMode === 'benefit_fmv') {
+        if ($row['benefit_description'] === null || $row['fair_market_value_cents'] === null
+            || $row['deductible_amount_cents'] === null) {
+            throw new RuntimeException('The stored benefit/FMV disclosure snapshot is incomplete.');
+        }
+        $benefitDescription = (string) $row['benefit_description'];
+        $fairMarketValueCents = (int) $row['fair_market_value_cents'];
+        $deductibleAmountCents = (int) $row['deductible_amount_cents'];
+    }
     $messages = [
         'pending_checkout' => 'Your registration was saved and checkout is being prepared.',
         'pending_payment' => 'Your registration is saved. Payment has not yet been confirmed.',
@@ -300,14 +335,15 @@ function app_registration_status(PDO $pdo, string $token): array
         'package_quantity' => (int) $row['package_quantity'],
         'addons' => app_decode_registration_addons((string) $row['addons_json']),
         'amount_cents' => (int) $row['amount_cents'], 'currency' => (string) $row['currency'],
+        'disclosure_mode' => $disclosureMode,
         'payer_name' => trim((string) $row['payer_first_name'] . ' ' . (string) $row['payer_last_name']),
         'payer_email' => (string) $row['payer_email'], 'participants' => $roster['participants'],
         'teams' => $roster['teams'],
         'ticket_groups' => $roster['ticket_groups'],
         'participant_capacity' => (int) $row['participant_capacity'],
-        'benefit_description' => (string) $row['benefit_description'],
-        'fair_market_value_cents' => (int) $row['fair_market_value_cents'],
-        'max_deductible_cents' => (int) $row['deductible_amount_cents'],
+        'benefit_description' => $benefitDescription,
+        'fair_market_value_cents' => $fairMarketValueCents,
+        'max_deductible_cents' => $deductibleAmountCents,
         'receipt_url' => $row['receipt_url'] !== null ? (string) $row['receipt_url'] : null,
         'message' => $messages[$row['status']] ?? 'Please contact COMEC at 901-222-0700 for status.',
     ];
