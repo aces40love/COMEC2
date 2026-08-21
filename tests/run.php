@@ -1211,16 +1211,80 @@ $tests['completed-and-refunded first snapshot schedules paid notices before refu
     test_assert_same(2, substr_count($source, 'app_store_square_payment($pdo, $registration, $payment);'));
 };
 
-$tests['registration paid timestamp comes from Square completed_at'] = static function () use ($siteRoot): void {
+$tests['registration paid timestamp uses Square capture or update time'] = static function () use ($siteRoot): void {
     test_assert_same(
         '2026-09-12 18:34:56.123456',
         app_square_datetime('2026-09-12T13:34:56.123456-05:00')
     );
+    test_assert_same(
+        '2026-09-12 18:30:00.000000',
+        app_square_payment_completed_at([
+            'status' => 'COMPLETED',
+            'source_type' => 'CARD',
+            'updated_at' => '2026-09-12T18:31:00Z',
+            'card_details' => [
+                'card_payment_timeline' => ['captured_at' => '2026-09-12T18:30:00Z'],
+            ],
+        ]),
+        'Card payments must use Square card_payment_timeline.captured_at.'
+    );
+    $externalSandboxPayment = [
+        'status' => 'COMPLETED',
+        'source_type' => 'EXTERNAL',
+        'external_details' => ['type' => 'CARD'],
+        'updated_at' => '2026-09-12T18:32:00Z',
+    ];
+    test_assert_same(
+        '2026-09-12 18:32:00.000000',
+        app_square_payment_completed_at($externalSandboxPayment),
+        'A completed non-card payment must use the canonical Square updated_at.'
+    );
+    test_assert_same(
+        '2026-09-12 18:29:00.000000',
+        app_square_payment_completed_at([
+            'status' => 'COMPLETED',
+            'completed_at' => '2026-09-12T18:29:00Z',
+            'updated_at' => '2026-09-12T18:32:00Z',
+        ]),
+        'Legacy completed_at payloads must remain compatible.'
+    );
+    test_assert_same(null, app_square_payment_completed_at([
+        'status' => 'PENDING',
+        'updated_at' => '2026-09-12T18:32:00Z',
+    ]));
+    test_assert_same(null, app_square_payment_completed_at(['status' => 'COMPLETED']));
+
+    foreach (['CARD', 'BANK_ACCOUNT', 'WALLET', 'BUY_NOW_PAY_LATER'] as $sourceType) {
+        test_assert_true(
+            app_square_payment_source_is_funded(['source_type' => $sourceType], 'production'),
+            'A funded Square source was rejected: ' . $sourceType
+        );
+    }
+    test_assert_false(app_square_payment_source_is_funded($externalSandboxPayment, 'production'));
+    test_assert_true(app_square_payment_source_is_funded($externalSandboxPayment, 'sandbox'));
+    test_assert_false(app_square_payment_source_is_funded([
+        'source_type' => 'EXTERNAL',
+        'external_details' => ['type' => 'OTHER'],
+    ], 'sandbox'));
+    test_assert_false(app_square_payment_source_is_funded(['source_type' => 'CASH'], 'production'));
+    test_assert_false(app_square_payment_source_is_funded(['source_type' => 'SQUARE_ACCOUNT'], 'production'));
+    test_assert_false(app_square_payment_source_is_funded(['source_type' => 'UNKNOWN'], 'production'));
+
+    $notificationPayment = app_square_notification_payment(
+        $externalSandboxPayment,
+        (string) app_square_payment_completed_at($externalSandboxPayment)
+    );
+    test_assert_same('2026-09-12 18:32:00.000000', $notificationPayment['completed_at']);
+    test_assert_same('2026-09-12 18:32:00 UTC', app_email_payment_time($notificationPayment['completed_at']));
     $source = file_get_contents($siteRoot . '/app/webhooks.php');
     test_assert_true(is_string($source));
     test_assert_true(str_contains($source, 'paid_at = COALESCE(paid_at, ?)'));
     test_assert_false(str_contains($source, 'paid_at = COALESCE(paid_at, UTC_TIMESTAMP(6))'));
     test_assert_true(str_contains($source, '$completedAt = app_square_datetime($storedPayment'));
+    test_assert_true(substr_count($source, 'app_square_payment_completed_at($payment)') >= 3);
+    test_assert_true(str_contains($source, 'app_square_notification_payment($payment, $completedAt)'));
+    test_assert_true(str_contains($source, 'app_enqueue_paid_confirmation($pdo, $lockedRegistration, $roster, $notificationPayment)'));
+    test_assert_true(str_contains($source, 'app_enqueue_internal_paid_notifications($pdo, $lockedRegistration, $roster, $notificationPayment)'));
 };
 
 $tests['payment-only payer email is a detailed non-charitable payment confirmation'] = static function (): void {

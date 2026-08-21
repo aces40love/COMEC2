@@ -172,7 +172,7 @@ function app_process_square_payment(PDO $pdo, string $paymentId): array
     }
 
     $paymentStatus = strtoupper((string) ($payment['status'] ?? 'UNKNOWN'));
-    if ($paymentStatus === 'COMPLETED' && app_square_datetime($payment['completed_at'] ?? null) === null) {
+    if ($paymentStatus === 'COMPLETED' && app_square_payment_completed_at($payment) === null) {
         throw new SquareApiException(503, [], 'Square has not supplied the completed payment timestamp yet.');
     }
     app_store_square_payment($pdo, $registration, $payment);
@@ -202,7 +202,7 @@ function app_process_square_refund(PDO $pdo, string $refundId): array
         return ['status' => 'ignored', 'result' => 'refund_payment_id_mismatch'];
     }
     if (strtoupper((string) ($payment['status'] ?? '')) !== 'COMPLETED'
-        || app_square_datetime($payment['completed_at'] ?? null) === null) {
+        || app_square_payment_completed_at($payment) === null) {
         throw new SquareApiException(503, [], 'Square has not supplied the completed payment details yet.');
     }
     $registration = app_registration_for_square_payment($pdo, $payment);
@@ -268,6 +268,9 @@ function app_verify_payment_against_registration(array $payment, array $registra
         || (string) $registration['square_location_id'] !== (string) app_config('SQUARE_LOCATION_ID')) {
         return 'payment_location_mismatch';
     }
+    if (!app_square_payment_source_is_funded($payment)) {
+        return 'payment_source_not_funded';
+    }
     $money = $payment['amount_money'] ?? null;
     if (!is_array($money)
         || (int) ($money['amount'] ?? -1) !== (int) $registration['amount_cents']
@@ -307,6 +310,7 @@ function app_store_square_payment(PDO $pdo, array $registration, array $payment)
         if ($completedAt === null) {
             throw new SquareApiException(503, [], 'Square has not supplied the completed payment timestamp yet.');
         }
+        $notificationPayment = app_square_notification_payment($payment, $completedAt);
 
         $grossCents = (int) $lockedRegistration['amount_cents'];
         $refundedCents = app_monotonic_refunded_cents(
@@ -341,8 +345,8 @@ function app_store_square_payment(PDO $pdo, array $registration, array $payment)
         ]);
 
         $roster = app_load_registration_roster($pdo, (int) $lockedRegistration['id']);
-        app_enqueue_paid_confirmation($pdo, $lockedRegistration, $roster, $payment);
-        app_enqueue_internal_paid_notifications($pdo, $lockedRegistration, $roster, $payment);
+        app_enqueue_paid_confirmation($pdo, $lockedRegistration, $roster, $notificationPayment);
+        app_enqueue_internal_paid_notifications($pdo, $lockedRegistration, $roster, $notificationPayment);
 
         if ($refundedCents > 0) {
             $fullyRefunded = $refundedCents >= $grossCents;
@@ -352,7 +356,7 @@ function app_store_square_payment(PDO $pdo, array $registration, array $payment)
                 $lockedRegistration,
                 $refundedCents,
                 $fullyRefunded,
-                $payment
+                $notificationPayment
             );
         }
     });
@@ -367,7 +371,7 @@ function app_upsert_payment_row(PDO $pdo, array $registration, array $payment, i
     $currency = strtoupper((string) $money['currency']);
     $incomingStatus = strtoupper((string) ($payment['status'] ?? 'UNKNOWN'));
     $incomingReceipt = app_safe_receipt_url($payment['receipt_url'] ?? null);
-    $incomingCompletedAt = app_square_datetime($payment['completed_at'] ?? null);
+    $incomingCompletedAt = app_square_payment_completed_at($payment);
     $incomingUpdatedAt = app_square_datetime($payment['updated_at'] ?? null);
     $refundedCents = app_monotonic_refunded_cents(
         0,
@@ -443,6 +447,55 @@ function app_upsert_payment_row(PDO $pdo, array $registration, array $payment, i
         'completed_at' => $effectiveCompletedAt,
         'square_updated_at' => $effectiveUpdatedAt,
     ];
+}
+
+function app_square_payment_completed_at(array $payment): ?string
+{
+    if (strtoupper((string) ($payment['status'] ?? '')) !== 'COMPLETED') {
+        return null;
+    }
+
+    // The current Square Payment object has no top-level completed_at. Card
+    // payments expose their capture time in card_payment_timeline; other
+    // completed payment types use the canonical Payment.updated_at. Preserve
+    // compatibility with older/test payloads that supplied completed_at.
+    $cardDetails = $payment['card_details'] ?? null;
+    $timeline = is_array($cardDetails) ? ($cardDetails['card_payment_timeline'] ?? null) : null;
+    $capturedAt = is_array($timeline) ? ($timeline['captured_at'] ?? null) : null;
+
+    return app_square_datetime($payment['completed_at'] ?? null)
+        ?? app_square_datetime($capturedAt)
+        ?? app_square_datetime($payment['updated_at'] ?? null);
+}
+
+function app_square_payment_source_is_funded(array $payment, ?string $environment = null): bool
+{
+    $sourceType = strtoupper(trim((string) ($payment['source_type'] ?? '')));
+    if (in_array($sourceType, ['CARD', 'BANK_ACCOUNT', 'WALLET', 'BUY_NOW_PAY_LATER'], true)) {
+        return true;
+    }
+
+    $environment = strtolower(trim($environment ?? (string) app_config('SQUARE_ENVIRONMENT')));
+    if ($environment !== 'sandbox' || $sourceType !== 'EXTERNAL') {
+        return false;
+    }
+
+    // Square's Payment Link Sandbox "Test Payment" simulator returns an
+    // EXTERNAL payment with type CARD. Never accept this bookkeeping-only
+    // source in production.
+    $externalDetails = $payment['external_details'] ?? null;
+    return is_array($externalDetails)
+        && strtoupper(trim((string) ($externalDetails['type'] ?? ''))) === 'CARD';
+}
+
+function app_square_notification_payment(array $payment, string $completedAt): array
+{
+    $completedAt = app_square_datetime($completedAt);
+    if ($completedAt === null) {
+        throw new RuntimeException('The payment notification timestamp is invalid.');
+    }
+    $payment['completed_at'] = $completedAt;
+    return $payment;
 }
 
 function app_monotonic_refunded_cents(int $existingCents, int $incomingCents, int $grossCents): int
