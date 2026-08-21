@@ -121,10 +121,10 @@ The dashboard contains personal information. Use a unique password, HTTPS, least
 3. Verify duplicate form submissions return the same checkout rather than creating two registrations.
 4. Confirm wrong totals, locations, currencies, merchants, webhook signatures, and reused idempotency keys fail safely.
 5. Confirm payer and all three staff emails arrive with the correct roster.
-6. Run full and partial refund tests and confirm status, email, dashboard, and CSV updates.
+6. Run full and partial refund tests in Square Sandbox and confirm status, email, dashboard, and CSV updates.
 7. Confirm the status link keeps its private token out of URL query logs.
 8. Reconcile the database, Square dashboard, email queue, and CSV totals.
-9. Perform one low-value production transaction and refund before public launch.
+9. In production, verify webhook delivery without a charge by temporarily subscribing to `location.updated`, using Square's official webhook-subscription tester, confirming the signed event is accepted and safely recorded as an unhandled event type, and then removing that temporary event subscription. Open one clearly labeled unpaid checkout only to verify its event, package, and amount; never enter payment details, and delete the unused Square payment link afterward. Monitor the first legitimate purchaser's payment and notifications after launch rather than creating a test charge or refund.
 
 ## Publishing and synchronization
 
