@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register for the 2026 Christmas Gala | COMEC</title>
+  <meta name="description" content="Reserve single, couple, or VIP admission for COMEC's Christmas Gala on December 19, 2026, at Ridgeway Country Club.">
+  <link rel="canonical" href="https://www.comec.org/gala-register.html">
+  <meta name="theme-color" content="#0c2b3d">
+  <meta property="og:title" content="Register for the 2026 COMEC Christmas Gala">
+  <meta property="og:description" content="Reserve single, couple, or VIP admission for December 19 at Ridgeway Country Club.">
+  <meta property="og:image" content="https://www.comec.org/assets/images/comec-pattern.webp">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <section class="crisis-bar" aria-label="Immediate help"><div class="container crisis-bar__inner"><span>If a child is in immediate danger, call 911. Missing child? Call 1-800-THE-LOST.</span></div></section>
+  <header class="site-header"><div class="container header-inner"><a class="brand" href="index.html" aria-label="COMEC home"><img src="assets/images/comec-logo-wide.jpg" width="960" height="250" alt="COMEC — Saving Children. Serving Families."></a><nav class="site-nav" id="primary-navigation" aria-label="Primary navigation" data-site-nav><ul><li class="nav-mobile-only"><a href="get-help.html">Get Help</a></li><li><a href="programs.html">What We Do</a></li><li><a href="events.html" aria-current="page">Events</a></li><li><a href="volunteer.html">Volunteer</a></li><li><a href="resources.html">Resources</a></li><li><a href="about.html">About</a></li><li class="nav-mobile-only"><a href="donate.html">Donate</a></li></ul></nav><div class="header-actions"><a class="button button--outline" href="get-help.html">Get help</a><a class="button button--gold" href="donate.html">Donate</a></div><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" aria-label="Open navigation" data-nav-toggle><span class="nav-toggle__bars" aria-hidden="true"></span></button></div></header>
+
+  <main id="main-content">
+    <section class="page-hero page-hero--registration">
+      <div class="container page-hero__content">
+        <a class="back-link" href="events.html#gala">&larr; Christmas Gala details</a>
+        <span class="eyebrow">Registration open</span>
+        <h1>Celebrate the season with COMEC.</h1>
+        <p class="lead">Reserve single, couple, or VIP admission for COMEC’s 2026 Christmas Gala.</p>
+        <div class="registration-event-facts" role="group" aria-label="Christmas Gala details">
+          <span><strong>Saturday</strong> December 19, 2026</span>
+          <span><strong>Time</strong> 6:00–11:00 PM</span>
+          <span><strong>Location</strong> Ridgeway Country Club</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--mist registration-section" aria-labelledby="registration-title">
+      <div class="container registration-layout">
+        <div class="registration-panel">
+          <div class="registration-panel__intro">
+            <span class="eyebrow">Online registration</span>
+            <h2 id="registration-title">Tell us who is attending.</h2>
+            <p>Fields marked <span aria-hidden="true">*</span><span class="visually-hidden">required</span> are required. Purchase up to 10 single tickets or couple packages in one payment and enter every attendee for COMEC’s guest list.</p>
+          </div>
+
+          <noscript><div class="form-alert form-alert--error" role="alert"><strong>JavaScript is required for secure online registration.</strong> Please enable it or call COMEC at <a href="tel:+19012220700">901-222-0700</a>.</div></noscript>
+          <div class="form-alert" role="status" aria-live="polite" data-config-status>Checking secure payment availability…</div>
+          <div class="form-alert" role="alert" aria-live="assertive" tabindex="-1" hidden data-form-error></div>
+
+          <form class="registration-form" id="gala-registration-form" action="api/registrations.php" method="post" data-gala-registration-form>
+            <fieldset class="form-section package-selector" aria-describedby="package-help">
+              <legend><span class="form-step">1</span> Choose an admission option <span aria-hidden="true">*</span></legend>
+              <p class="form-help" id="package-help">Select one option. You will review the total before going to secure checkout.</p>
+              <div class="package-grid">
+                <label class="package-option">
+                  <input type="radio" name="package_code" value="gala_single" required data-package-radio>
+                  <span class="package-option__body"><span class="package-option__top"><strong data-package-name="gala_single">Single admission</strong><span data-package-price="gala_single">$135</span></span><span>Admission for one attendee</span></span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package_code" value="gala_couple" required data-package-radio>
+                  <span class="package-option__body"><span class="package-option__top"><strong data-package-name="gala_couple">Couple admission</strong><span data-package-price="gala_couple">$250</span></span><span>Admission for up to two attendees</span></span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package_code" value="gala_vip_single" required data-package-radio>
+                  <span class="package-option__body"><span class="package-option__top"><strong data-package-name="gala_vip_single">VIP single admission</strong><span data-package-price="gala_vip_single">$175</span></span><span>VIP admission for one attendee</span></span>
+                </label>
+                <label class="package-option">
+                  <input type="radio" name="package_code" value="gala_vip_couple" required data-package-radio>
+                  <span class="package-option__body"><span class="package-option__top"><strong data-package-name="gala_vip_couple">VIP couple admission</strong><span data-package-price="gala_vip_couple">$300</span></span><span>VIP admission for up to two attendees</span></span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+              <legend><span class="form-step">2</span> Purchaser and receipt details</legend>
+              <p class="form-help">We’ll use this information for the registration and payment receipt. The purchaser does not have to be an attendee.</p>
+              <div class="form-grid form-grid--2">
+                <div class="form-field"><label for="payer-first-name">First name <span aria-hidden="true">*</span></label><input id="payer-first-name" name="payer_first_name" type="text" autocomplete="given-name" maxlength="80" required></div>
+                <div class="form-field"><label for="payer-last-name">Last name <span aria-hidden="true">*</span></label><input id="payer-last-name" name="payer_last_name" type="text" autocomplete="family-name" maxlength="80" required></div>
+                <div class="form-field form-grid__wide"><label for="payer-company">Company or organization <span class="optional">Optional</span></label><input id="payer-company" name="payer_company" type="text" autocomplete="organization" maxlength="120"></div>
+                <div class="form-field"><label for="payer-email">Receipt email <span aria-hidden="true">*</span></label><input id="payer-email" name="payer_email" type="email" inputmode="email" autocomplete="email" maxlength="160" aria-describedby="email-help" required><small id="email-help">Payment and registration updates will go here.</small></div>
+                <div class="form-field"><label for="payer-phone">Phone <span aria-hidden="true">*</span></label><input id="payer-phone" name="payer_phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" required></div>
+                <div class="form-field form-grid__wide"><label for="payer-address-line1">Mailing address <span aria-hidden="true">*</span></label><input id="payer-address-line1" name="payer_address_line1" type="text" autocomplete="address-line1" maxlength="160" required></div>
+                <div class="form-field form-grid__wide"><label for="payer-city">City <span aria-hidden="true">*</span></label><input id="payer-city" name="payer_city" type="text" autocomplete="address-level2" maxlength="100" required></div>
+                <div class="form-field"><label for="payer-state">State <span aria-hidden="true">*</span></label><input id="payer-state" name="payer_state" type="text" autocomplete="address-level1" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" title="Enter a two-letter state abbreviation" required></div>
+                <div class="form-field"><label for="payer-postal-code">ZIP code <span aria-hidden="true">*</span></label><input id="payer-postal-code" name="payer_postal_code" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="10" pattern="[0-9]{5}(-[0-9]{4})?" title="Enter a five-digit ZIP code or ZIP+4" required></div>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-section" data-ticket-group-section hidden>
+              <legend><span class="form-step">3</span> Admissions and attendees</legend>
+              <div class="form-field">
+                <label for="gala-package-quantity"><span data-quantity-label>Number of admissions</span> <span aria-hidden="true">*</span></label>
+                <select id="gala-package-quantity" name="package_quantity" aria-describedby="gala-package-quantity-help" required disabled data-package-quantity>
+                  <option value="">Choose a quantity</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                </select>
+                <small id="gala-package-quantity-help" data-quantity-help>The selected admission price applies to each unit.</small>
+              </div>
+              <div data-ticket-group-list></div>
+            </fieldset>
+
+            <fieldset class="form-section form-section--last">
+              <legend><span class="form-step">4</span> Review and continue</legend>
+              <div class="form-field"><label for="registration-notes">Notes or requests <span class="optional">Optional</span></label><textarea id="registration-notes" name="notes" rows="4" maxlength="1000" aria-describedby="notes-help"></textarea><small id="notes-help">Use this space for accessibility needs, guest-list questions, or other requests.</small></div>
+
+              <div class="notice notice--blue" data-tax-disclosure hidden>
+                <strong>Admission benefits and tax information</strong>
+                <p data-benefit-description></p>
+                <p><strong>Fair market value of benefits:</strong> <span data-fair-market-value>—</span></p>
+                <p><strong>Maximum potentially deductible amount:</strong> <span data-maximum-deductible>—</span></p>
+                <p class="small">This estimate is based on COMEC’s approved benefit valuation for the selected admission. Tax treatment depends on individual circumstances; consult a qualified tax adviser.</p>
+              </div>
+
+              <div class="honeypot" aria-hidden="true"><label for="registration-website">Website</label><input id="registration-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+
+              <label class="consent-field"><input id="registration-consent" name="consent" type="checkbox" value="yes" required><span>I confirm that the information above is accurate and understand that registration is complete only after payment. <span aria-hidden="true">*</span></span></label>
+
+              <p class="form-payment-note">Next, you’ll be redirected to Square’s secure checkout. After payment is confirmed, COMEC will email a detailed payment and registration confirmation. Square may also send its payment receipt.</p>
+              <button class="button button--gold form-submit" type="submit" data-submit-button disabled><span data-submit-label>Continue to secure payment</span><span class="button-spinner" aria-hidden="true" hidden data-submit-spinner></span></button>
+            </fieldset>
+          </form>
+        </div>
+
+        <aside class="registration-summary" aria-labelledby="summary-title">
+          <span class="tag tag--gold">December 19, 2026</span>
+          <h2 id="summary-title">Registration summary</h2>
+          <dl>
+            <div><dt>Option</dt><dd data-summary-package>Choose an option</dd></div>
+            <div><dt>Admission</dt><dd data-summary-includes>—</dd></div>
+            <div><dt>Quantity</dt><dd data-summary-quantity>—</dd></div>
+            <div><dt>Guests attending</dt><dd data-summary-attendees>—</dd></div>
+            <div><dt>Calculation</dt><dd data-summary-calculation>—</dd></div>
+            <div class="registration-summary__total"><dt>Total</dt><dd data-summary-price>—</dd></div>
+          </dl>
+          <div class="registration-summary__venue"><strong>Ridgeway Country Club</strong><span>9800 Poplar Avenue<br>Memphis, Tennessee 38139</span><span>6:00–11:00 PM · Formal/semi-formal</span></div>
+          <p class="small muted">Need help registering? Call <a href="tel:+19012220700">901-222-0700</a>.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-main"><div class="footer-brand"><img src="assets/images/comec-logo-wide.jpg" width="960" height="250" loading="lazy" alt="COMEC"><p>The Commission on Missing and Exploited Children promotes the safety and welfare of children through free family support, education, and prevention programs.</p></div><div><h2>Find help</h2><ul class="footer-links"><li><a href="get-help.html">Get Help Now</a></li><li><a href="programs.html">Programs</a></li><li><a href="resources.html">Resources</a></li></ul></div><div><h2>Get involved</h2><ul class="footer-links"><li><a href="volunteer.html">Volunteer</a></li><li><a href="events.html">2026 Events</a></li><li><a href="donate.html">Donate</a></li><li><a href="https://www.facebook.com/comecmemphis" target="_blank" rel="noopener noreferrer">Facebook</a></li><li><a href="https://www.youtube.com/watch?v=IUwCqhVjnOg" target="_blank" rel="noopener noreferrer">YouTube</a></li></ul></div><div><h2>Contact COMEC</h2><ul class="footer-links"><li>901-222-0700</li><li>616 Adams Avenue<br>Room 102<br>Memphis, TN 38105</li></ul></div></div><div class="container footer-bottom"><p>© <span data-current-year>2026</span> Commission on Missing and Exploited Children.</p><p>COMEC is not an emergency service. In immediate danger, call 911.</p></div></footer>
+  <script src="assets/js/main.js" defer></script>
+  <script src="assets/js/gala-registration.js" defer></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # COMEC website content sources
 
-Last reviewed: July 27, 2026.
+Last reviewed: August 20, 2026.
 
 This file is the publishing source of truth. “Verified” means the value is backed by a current COMEC document, direct COMEC confirmation, or the responsible first-party agency. It does not mean the old WordPress page happens to contain the same text.
 
@@ -27,11 +27,12 @@ This file is the publishing source of truth. “Verified” means the value is b
 | Golf title | 31st Annual COMEC Charity Golf Tournament | 2026 golf flyer | Verified |
 | Golf date/time | Saturday, September 12, 2026; 8:00 AM shotgun start | 2026 golf flyer | Verified |
 | Golf venue | The Links at Galloway, 3815 Walnut Grove Road, Memphis, TN 38111 | 2026 golf flyer | Verified |
-| Golf prices | Individual $100 advance / $125 day-of; team $400; corporate $1,000; hole $250; contest/drink-cart options $500; eight team mulligans $40 | 2026 golf flyer | Verified; reconfirm if flyer is amended |
+| Golf prices | Individual $100 advance / $125 day-of; team $400; corporate $1,000; hole $250; contest/drink-cart options $500; eight team mulligans $40 | `P:\COMEC\Golf Flyer\COMEC 2026 Golf Flyer Updated.pdf` and event-page materials | Verified; reconfirm if flyer is amended |
 | Gala date | Saturday, December 19, 2026 | Current leadership/giving announcement | Verified |
-| Gala venue | Ridgeway Country Club, 9800 Poplar Avenue, Germantown | Current leadership/giving announcement | Verified |
-| Gala time | 6:00–10:00 PM | Current COMEC project materials | Reconfirm before production launch |
-| Gala prices/sponsors | Not yet published | Current announcement says opening soon | Do not invent; update when approved |
+| Gala venue | Ridgeway Country Club, 9800 Poplar Ave, Memphis, TN 38139 | `P:\COMEC\Christmas Gala\Flyer for Gala.png` | Verified from current flyer; flyer city differs from earlier Germantown copy |
+| Gala time / dress | 6:00–11:00 PM; formal/semi-formal | `P:\COMEC\Christmas Gala\Flyer for Gala.png` | Verified from current flyer |
+| Gala ticket prices | Single $135; couple $250; VIP single $175; VIP couple $300 | Direct COMEC confirmation, August 20, 2026 | Verified prices; document and publish VIP inclusions before launch |
+| Gala sponsor levels | Platinum $7,500; Gold $5,500; Silver $3,500; Bronze $1,500 | `P:\COMEC\Christmas Gala\Flyer for Gala.png` | Prices verified; included admissions/benefits not supplied, so online sponsor checkout is withheld |
 
 ## Official crisis and referral sources
 
@@ -77,7 +78,7 @@ This file is the publishing source of truth. “Verified” means the value is b
 - A current impact total without a dated supporting report.
 - A public email address until COMEC confirms which inbox is actively monitored.
 - Personal residential mailing addresses from event materials.
-- Gala ticket prices or benefits that have not been approved.
+- Gala VIP benefit descriptions that have not yet been supplied.
 - Claims that COMEC performs law-enforcement investigations, emergency dispatch, or mandated government reporting.
 
 ## Pre-publication sign-off
@@ -85,7 +86,9 @@ This file is the publishing source of truth. “Verified” means the value is b
 - [ ] Greg Bethel approves biography, title, and photo.
 - [ ] Philip Boals approves biography, title, and photo.
 - [ ] Event lead reconfirms golf workflow and all prices.
-- [ ] Event lead reconfirms gala time, venue, and “coming soon” language.
+- [ ] Event lead reconfirms gala time, venue, prices, and VIP inclusions.
+- [ ] CPA/tax adviser approves package benefit descriptions, fair-market values, solicitation disclosures, and acknowledgment wording.
+- [ ] Staff completes Square sandbox, webhook, email-recipient, roster, dashboard, and refund tests in `REGISTRATION-SYSTEM.md`.
 - [ ] Treasurer or authorized officer tests the PayPal hosted button and receipt identity.
 - [ ] Staff confirms the office phone and address.
 - [ ] Volunteer lead confirms role descriptions, intake ownership, and any screening or training requirements.

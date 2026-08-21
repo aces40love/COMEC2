@@ -50,7 +50,7 @@ The new build shows the legal name, address, phone, current leaders, current eve
 
 ### 5. Events need transactional detail
 
-The golf page includes the date, start time, venue, address, actual 2026 price levels, downloadable flyer, and office phone. The gala is clearly labeled “save the date,” with unpublished ticket details explicitly described as forthcoming.
+The golf page includes the date, start time, venue, address, actual 2026 price levels, downloadable flyer, and office phone. The gala now publishes the current flyer details and approved ticket prices; sponsorship prices are visible but online sponsor checkout remains withheld until the included benefits and guest counts are approved.
 
 ### 6. Video should tell the story without controlling the page
 

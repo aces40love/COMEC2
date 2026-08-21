@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registration Status | COMEC</title>
+  <meta name="description" content="Check the payment and registration status for a COMEC event.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0c2b3d">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <section class="crisis-bar" aria-label="Immediate help"><div class="container crisis-bar__inner"><span>If a child is in immediate danger, call 911. Missing child? Call 1-800-THE-LOST.</span></div></section>
+  <header class="site-header"><div class="container header-inner"><a class="brand" href="index.html" aria-label="COMEC home"><img src="assets/images/comec-logo-wide.jpg" width="960" height="250" alt="COMEC — Saving Children. Serving Families."></a><nav class="site-nav" id="primary-navigation" aria-label="Primary navigation" data-site-nav><ul><li class="nav-mobile-only"><a href="get-help.html">Get Help</a></li><li><a href="programs.html">What We Do</a></li><li><a href="events.html" aria-current="page">Events</a></li><li><a href="volunteer.html">Volunteer</a></li><li><a href="resources.html">Resources</a></li><li><a href="about.html">About</a></li><li class="nav-mobile-only"><a href="donate.html">Donate</a></li></ul></nav><div class="header-actions"><a class="button button--outline" href="get-help.html">Get help</a><a class="button button--gold" href="donate.html">Donate</a></div><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" aria-label="Open navigation" data-nav-toggle><span class="nav-toggle__bars" aria-hidden="true"></span></button></div></header>
+
+  <main id="main-content" class="status-page">
+    <section class="section">
+      <div class="container status-container">
+        <div class="status-card" data-status-card aria-busy="true">
+          <div class="status-card__indicator status-card__indicator--loading" data-status-indicator aria-hidden="true"><span></span></div>
+          <div class="status-card__heading" role="status" aria-live="polite" aria-atomic="true">
+            <span class="eyebrow" data-event-name>Event registration</span>
+            <h1 data-status-title>Checking your payment…</h1>
+            <p class="lead" data-status-message>Please keep this page open while we confirm your registration.</p>
+          </div>
+
+          <div class="registration-details" data-registration-details hidden>
+            <h2>Registration details</h2>
+            <dl>
+              <div><dt>Reference</dt><dd data-detail-reference>—</dd></div>
+              <div><dt>Registration</dt><dd data-detail-package>—</dd></div>
+              <div><dt>Amount</dt><dd data-detail-amount>—</dd></div>
+              <div><dt>Purchaser</dt><dd data-detail-payer>—</dd></div>
+              <div data-detail-email-row><dt>Receipt email</dt><dd data-detail-email>—</dd></div>
+            </dl>
+            <div class="registration-details__participants" data-participant-section hidden>
+              <h3 data-participant-title>Participants</h3>
+              <ol data-detail-participants></ol>
+            </div>
+          </div>
+
+          <div class="status-actions" data-status-actions>
+            <a class="button" href="#" target="_blank" rel="noopener noreferrer" hidden data-receipt-link>View payment receipt</a>
+            <button class="button" type="button" hidden data-status-retry>Check again</button>
+            <a class="button button--outline" href="events.html">Event details</a>
+          </div>
+          <p class="small muted status-help">Questions? Call COMEC at <a href="tel:+19012220700">901-222-0700</a> and have your registration reference ready.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="container footer-main"><div class="footer-brand"><img src="assets/images/comec-logo-wide.jpg" width="960" height="250" loading="lazy" alt="COMEC"><p>The Commission on Missing and Exploited Children promotes the safety and welfare of children through free family support, education, and prevention programs.</p></div><div><h2>Find help</h2><ul class="footer-links"><li><a href="get-help.html">Get Help Now</a></li><li><a href="programs.html">Programs</a></li><li><a href="resources.html">Resources</a></li></ul></div><div><h2>Get involved</h2><ul class="footer-links"><li><a href="volunteer.html">Volunteer</a></li><li><a href="events.html">2026 Events</a></li><li><a href="donate.html">Donate</a></li><li><a href="https://www.facebook.com/comecmemphis" target="_blank" rel="noopener noreferrer">Facebook</a></li><li><a href="https://www.youtube.com/watch?v=IUwCqhVjnOg" target="_blank" rel="noopener noreferrer">YouTube</a></li></ul></div><div><h2>Contact COMEC</h2><ul class="footer-links"><li>901-222-0700</li><li>616 Adams Avenue<br>Room 102<br>Memphis, TN 38105</li></ul></div></div><div class="container footer-bottom"><p>© <span data-current-year>2026</span> Commission on Missing and Exploited Children.</p><p>COMEC is not an emergency service. In immediate danger, call 911.</p></div></footer>
+  <script src="assets/js/main.js" defer></script>
+  <script src="assets/js/registration-status.js" defer></script>
+</body>
+</html>

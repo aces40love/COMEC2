@@ -111,12 +111,12 @@ Review this every Monday with the Executive Director and Board President:
 
 ## Website-to-CRM implementation requirements
 
-The current website contains no fake forms and makes no claim of CRM automation. When COMEC selects or confirms its CRM, implement these connections:
+The local 2026 build now includes server-side golf and gala registration, Square payment verification, staff/payer email queues, and a private CSV export. It has not yet been deployed and does not claim direct CRM automation. When COMEC selects or confirms its CRM, implement these remaining connections:
 
-1. Use hosted forms or a secure server endpoint; never expose a CRM secret in browser JavaScript.
-2. Give each form submission a source page, campaign ID, consent statement/version, timestamp, and deduplication key.
-3. Connect PayPal transactions through an authenticated server-side webhook or scheduled reconciliation process.
+1. Map the verified Square event export/API records to CRM constituent and opportunity records without exposing a CRM secret in browser JavaScript.
+2. Preserve each registration's event/package code, consent version/timestamp, payment reference, and idempotency key during CRM import.
+3. Connect PayPal donation transactions through an authenticated server-side webhook or scheduled reconciliation process.
 4. Write event registrations, sponsorships, gifts, refunds, and acknowledgments back to the constituent timeline.
-5. Create an exception queue for unmatched transactions and failed enrichments; do not silently create duplicates.
+5. Create an exception queue for unmatched transactions and failed imports; do not silently create duplicates.
 
 Credentials and CRM/API access are required to implement the live transaction sync. They should be supplied through the chosen service’s secure administrator interface, not placed in the website folder or sent in a document.
