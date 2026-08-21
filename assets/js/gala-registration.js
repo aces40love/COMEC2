@@ -68,6 +68,11 @@
   const summaryAttendees = document.querySelector("[data-summary-attendees]");
   const summaryCalculation = document.querySelector("[data-summary-calculation]");
   const summaryPrice = document.querySelector("[data-summary-price]");
+  const mobileSummaryPackage = form.querySelector("[data-mobile-summary-package]");
+  const mobileSummaryQuantity = form.querySelector("[data-mobile-summary-quantity]");
+  const mobileSummaryAttendees = form.querySelector("[data-mobile-summary-attendees]");
+  const mobileSummaryCalculation = form.querySelector("[data-mobile-summary-calculation]");
+  const mobileSummaryPrice = form.querySelector("[data-mobile-summary-price]");
   const taxDisclosure = form.querySelector("[data-tax-disclosure]");
   const benefitDescription = form.querySelector("[data-benefit-description]");
   const fairMarketValue = form.querySelector("[data-fair-market-value]");
@@ -206,6 +211,7 @@
       input.name = "group_" + (groupIndex + 1) + "_attendee_" + (attendeeIndex + 1);
       input.type = "text";
       input.autocomplete = "off";
+      input.autocapitalize = "words";
       input.maxLength = 120;
       input.required = true;
       input.dataset.groupParticipant = "";
@@ -225,13 +231,13 @@
   function createGroupCard(groupIndex, selected) {
     const state = statesByKind[selected.kind][groupIndex];
     const card = document.createElement("fieldset");
-    card.className = "form-section";
+    card.className = "form-section registration-unit-card";
     card.dataset.ticketGroupCard = "";
     card.dataset.groupIndex = String(groupIndex);
     const groupNumber = groupIndex + 1;
     const unitLabel = selected.kind === "single" ? "Single ticket" : "Couple package";
     const legend = document.createElement("legend");
-    legend.textContent = unitLabel + " " + groupNumber;
+    legend.textContent = unitLabel + " " + groupNumber + " of " + selectedQuantity();
     card.appendChild(legend);
 
     if (selected.kind === "couple") {
@@ -278,8 +284,7 @@
       purchaserControl.dataset.groupPurchaserAttending = "";
       purchaserControl.checked = state.purchaserAttending;
       const purchaserText = document.createElement("span");
-      purchaserText.textContent = "The purchaser is attending — use their first and last name for Attendee 1 in the first "
-        + (selected.kind === "single" ? "ticket." : "couple package.");
+      purchaserText.textContent = "Purchaser is attending — use their name for Attendee 1.";
       purchaserField.append(purchaserControl, purchaserText);
       card.appendChild(purchaserField);
     }
@@ -321,33 +326,57 @@
     return quantity === 1 ? "couple package" : "couple packages";
   }
 
+  function setSummaryValue(desktopNode, mobileNode, value) {
+    desktopNode.textContent = value;
+    if (mobileNode) mobileNode.textContent = value;
+  }
+
+  function readySubmitCopy() {
+    const selected = selectedPackage();
+    const quantity = selectedQuantity();
+    if (!selected || !quantity) return "Continue to secure payment";
+    const config = selected.config;
+    const unitAmount = config ? config.amount_cents : selected.amountCents;
+    return "Continue to secure payment — " + money.format((unitAmount * quantity) / 100);
+  }
+
+  function refreshReadySubmitLabel() {
+    if (configurationReady && form.getAttribute("aria-busy") !== "true") {
+      submitLabel.textContent = readySubmitCopy();
+    }
+  }
+
   function updateSummary(selected) {
     if (!selected) {
-      summaryPackage.textContent = "Choose an option";
+      setSummaryValue(summaryPackage, mobileSummaryPackage, "Choose an option");
       summaryIncludes.textContent = "—";
-      summaryQuantity.textContent = "—";
-      summaryAttendees.textContent = "—";
-      summaryCalculation.textContent = "—";
-      summaryPrice.textContent = "—";
+      setSummaryValue(summaryQuantity, mobileSummaryQuantity, "—");
+      setSummaryValue(summaryAttendees, mobileSummaryAttendees, "—");
+      setSummaryValue(summaryCalculation, mobileSummaryCalculation, "—");
+      setSummaryValue(summaryPrice, mobileSummaryPrice, "—");
       taxDisclosure.hidden = true;
       paymentConfirmationNotice.hidden = !(configurationReady && disclosureMode === paymentConfirmationMode);
+      refreshReadySubmitLabel();
       return;
     }
 
     const metrics = groupMetrics(selected);
     const config = configurationReady ? selected.config : null;
     const unitAmount = config ? config.amount_cents : selected.amountCents;
-    summaryPackage.textContent = config ? config.name : selected.name;
+    setSummaryValue(summaryPackage, mobileSummaryPackage, config ? config.name : selected.name);
     summaryIncludes.textContent = selected.includes;
-    summaryQuantity.textContent = metrics.quantity ? String(metrics.quantity) : "—";
-    summaryAttendees.textContent = metrics.complete ? String(metrics.attendees) : "—";
+    setSummaryValue(summaryQuantity, mobileSummaryQuantity, metrics.quantity ? String(metrics.quantity) : "—");
+    setSummaryValue(summaryAttendees, mobileSummaryAttendees, metrics.complete ? String(metrics.attendees) : "—");
     if (metrics.quantity) {
-      summaryCalculation.textContent = money.format(unitAmount / 100) + " × " + metrics.quantity + " "
-        + quantityUnitText(selected, metrics.quantity);
-      summaryPrice.textContent = money.format((unitAmount * metrics.quantity) / 100);
+      setSummaryValue(
+        summaryCalculation,
+        mobileSummaryCalculation,
+        money.format(unitAmount / 100) + " × " + metrics.quantity + " " + quantityUnitText(selected, metrics.quantity)
+      );
+      setSummaryValue(summaryPrice, mobileSummaryPrice, money.format((unitAmount * metrics.quantity) / 100));
     } else {
-      summaryCalculation.textContent = "—";
-      summaryPrice.textContent = "—";
+      setSummaryValue(summaryCalculation, mobileSummaryCalculation, "—");
+      setSummaryValue(summaryPrice, mobileSummaryPrice, "—");
     }
 
     if (configurationReady && disclosureMode === paymentConfirmationMode) {
@@ -363,6 +392,7 @@
       taxDisclosure.hidden = true;
       paymentConfirmationNotice.hidden = true;
     }
+    refreshReadySubmitLabel();
   }
 
   function updatePackage() {
@@ -505,10 +535,26 @@
     }
   }
 
-  function showError(message) {
+  function showError(message, focusAlert) {
     errorAlert.textContent = message;
     errorAlert.hidden = false;
-    errorAlert.focus();
+    if (focusAlert !== false) errorAlert.focus();
+  }
+
+  function focusAndReveal(control) {
+    if (!control) return;
+    try {
+      control.focus({ preventScroll: true });
+    } catch (error) {
+      control.focus();
+    }
+    if (typeof control.scrollIntoView === "function") {
+      const root = document.documentElement;
+      const previousScrollBehavior = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      control.scrollIntoView({ block: "center", inline: "nearest" });
+      root.style.scrollBehavior = previousScrollBehavior;
+    }
   }
 
   function clearError() {
@@ -567,12 +613,14 @@
   }
 
   function applyServerFieldErrors(fields) {
-    if (!fields || typeof fields !== "object") return;
+    if (!fields || typeof fields !== "object") return null;
     let index = 0;
+    let firstInvalidControl = null;
     Object.keys(fields).forEach(function (key) {
       const control = fieldForError(key);
       const fieldMessage = fields[key];
       if (!control || typeof fieldMessage !== "string" || !fieldMessage.trim()) return;
+      if (!firstInvalidControl) firstInvalidControl = control;
       index += 1;
       const errorId = "gala-registration-field-error-" + index;
       const errorNode = document.createElement("small");
@@ -594,6 +642,7 @@
         : control.closest(".form-field, .consent-field") || control.parentElement;
       if (container) container.insertAdjacentElement("afterend", errorNode);
     });
+    return firstInvalidControl;
   }
 
   function setSubmitting(isSubmitting) {
@@ -601,7 +650,7 @@
     submitButton.disabled = isSubmitting || !configurationReady;
     submitLabel.textContent = isSubmitting
       ? "Opening secure checkout…"
-      : configurationReady ? "Continue to secure payment" : unavailableCopy().button;
+      : configurationReady ? readySubmitCopy() : unavailableCopy().button;
     submitSpinner.hidden = !isSubmitting;
   }
 
@@ -697,10 +746,14 @@
     form.classList.add("was-validated");
 
     if (!form.checkValidity()) {
-      showError("Please complete the required fields before continuing.");
-      form.reportValidity();
-      const firstInvalid = form.querySelector(":invalid");
-      if (firstInvalid) firstInvalid.focus();
+      const firstInvalid = form.querySelector("input:invalid, select:invalid, textarea:invalid");
+      showError("Please complete the required fields before continuing.", !firstInvalid);
+      if (firstInvalid) {
+        if (typeof firstInvalid.reportValidity === "function") firstInvalid.reportValidity();
+        focusAndReveal(firstInvalid);
+      } else {
+        form.reportValidity();
+      }
       return;
     }
     if (!configurationReady) {
@@ -714,7 +767,9 @@
     const selected = packages[code];
     const selectedConfig = selected && selected.config;
     if (!selected || !selectedConfig) {
-      showError("Please choose an admission option before continuing.");
+      const packageField = packageRadios[0] || null;
+      showError("Please choose an admission option before continuing.", !packageField);
+      focusAndReveal(packageField);
       return;
     }
     if (!idempotencyKey) {
@@ -724,8 +779,8 @@
 
     const quantity = selectedQuantity();
     if (quantity < 1 || quantity > 10) {
-      showError("Please choose how many admission units you are purchasing.");
-      packageQuantity.focus();
+      showError("Please choose how many admission units you are purchasing.", false);
+      focusAndReveal(packageQuantity);
       return;
     }
     ensureGroupStates(selected.kind, quantity);
@@ -735,17 +790,17 @@
       const attendeeCount = groupAttendeeCount(state, selected.kind);
       const card = ticketGroupList.querySelector('[data-group-index="' + groupIndex + '"]');
       if (attendeeCount < selectedConfig.participant_min || attendeeCount > selectedConfig.participant_max) {
-        showError("Please choose how many guests are attending for every couple package.");
         const countField = card && card.querySelector("[data-group-attendee-count]");
-        if (countField) countField.focus();
+        showError("Please choose how many guests are attending for every couple package.", !countField);
+        focusAndReveal(countField);
         return;
       }
       const names = state.participants.slice(0, attendeeCount).map(function (name) { return name.trim(); });
       const blankName = names.findIndex(function (name) { return !name; });
       if (blankName !== -1) {
-        showError("Please enter the name of every attendee.");
         const nameField = card && card.querySelector('[data-attendee-index="' + blankName + '"]');
-        if (nameField) nameField.focus();
+        showError("Please enter the name of every attendee.", !nameField);
+        focusAndReveal(nameField);
         return;
       }
       ticketGroups.push({
@@ -813,8 +868,12 @@
       } else if (error && (error.name === "TypeError" || /failed to fetch|networkerror|load failed/i.test(error.message || ""))) {
         showError("We couldn’t reach secure checkout. Please check your connection and try again.");
       } else {
-        showError(error && error.message ? error.message : "We couldn’t start checkout. Please try again.");
-        if (error && error.fields) applyServerFieldErrors(error.fields);
+        const invalidControl = error && error.fields ? applyServerFieldErrors(error.fields) : null;
+        showError(
+          error && error.message ? error.message : "We couldn’t start checkout. Please try again.",
+          !invalidControl
+        );
+        focusAndReveal(invalidControl);
       }
       setSubmitting(false);
     } finally {

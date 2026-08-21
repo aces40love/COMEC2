@@ -12,7 +12,7 @@
   <meta property="og:image" content="https://www.comec.org/assets/images/comec-pattern.webp">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png">
   <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
-  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/styles.css?v=2a2c4d37558c">
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -31,6 +31,7 @@
           <span><strong>Time</strong> 6:00–11:00 PM</span>
           <span><strong>Location</strong> Ridgeway Country Club</span>
         </div>
+        <div class="button-row registration-hero-actions"><a class="button button--gold" href="#gala-package-options">Start registration</a></div>
       </div>
     </section>
 
@@ -48,7 +49,7 @@
           <div class="form-alert" role="alert" aria-live="assertive" tabindex="-1" hidden data-form-error></div>
 
           <form class="registration-form" id="gala-registration-form" action="api/registrations.php" method="post" data-gala-registration-form>
-            <fieldset class="form-section package-selector" aria-describedby="package-help">
+            <fieldset class="form-section package-selector" id="gala-package-options" aria-describedby="package-help">
               <legend><span class="form-step">1</span> Choose an admission option <span aria-hidden="true">*</span></legend>
               <p class="form-help" id="package-help">Select one option. You will review the total before going to secure checkout.</p>
               <div class="package-grid">
@@ -82,7 +83,7 @@
                 <div class="form-field"><label for="payer-phone">Phone <span aria-hidden="true">*</span></label><input id="payer-phone" name="payer_phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" required></div>
                 <div class="form-field form-grid__wide"><label for="payer-address-line1">Mailing address <span aria-hidden="true">*</span></label><input id="payer-address-line1" name="payer_address_line1" type="text" autocomplete="address-line1" maxlength="160" required></div>
                 <div class="form-field form-grid__wide"><label for="payer-city">City <span aria-hidden="true">*</span></label><input id="payer-city" name="payer_city" type="text" autocomplete="address-level2" maxlength="100" required></div>
-                <div class="form-field"><label for="payer-state">State <span aria-hidden="true">*</span></label><input id="payer-state" name="payer_state" type="text" autocomplete="address-level1" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" title="Enter a two-letter state abbreviation" required></div>
+                <div class="form-field"><label for="payer-state">State <span aria-hidden="true">*</span></label><input id="payer-state" name="payer_state" type="text" autocomplete="address-level1" autocapitalize="characters" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" title="Enter a two-letter state abbreviation" required></div>
                 <div class="form-field"><label for="payer-postal-code">ZIP code <span aria-hidden="true">*</span></label><input id="payer-postal-code" name="payer_postal_code" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="10" pattern="[0-9]{5}(-[0-9]{4})?" title="Enter a five-digit ZIP code or ZIP+4" required></div>
               </div>
             </fieldset>
@@ -112,6 +113,17 @@
             <fieldset class="form-section form-section--last">
               <legend><span class="form-step">4</span> Review and continue</legend>
               <div class="form-field"><label for="registration-notes">Notes or requests <span class="optional">Optional</span></label><textarea id="registration-notes" name="notes" rows="4" maxlength="1000" aria-describedby="notes-help"></textarea><small id="notes-help">Use this space for accessibility needs, guest-list questions, or other requests.</small></div>
+
+              <section class="registration-mobile-summary" aria-labelledby="gala-mobile-summary-title">
+                <h3 id="gala-mobile-summary-title">Review your registration</h3>
+                <dl>
+                  <div><dt>Option</dt><dd data-mobile-summary-package>Choose an option</dd></div>
+                  <div><dt>Quantity</dt><dd data-mobile-summary-quantity>—</dd></div>
+                  <div><dt>Guests attending</dt><dd data-mobile-summary-attendees>—</dd></div>
+                  <div><dt>Calculation</dt><dd data-mobile-summary-calculation>—</dd></div>
+                  <div class="registration-mobile-summary__total"><dt>Total</dt><dd data-mobile-summary-price aria-live="polite">—</dd></div>
+                </dl>
+              </section>
 
               <div class="notice notice--blue" data-tax-disclosure hidden>
                 <strong>Admission benefits and tax information</strong>
@@ -156,6 +168,6 @@
 
   <footer class="site-footer"><div class="container footer-main"><div class="footer-brand"><img src="assets/images/comec-logo-wide.jpg" width="960" height="250" loading="lazy" alt="COMEC"><p>The Commission on Missing and Exploited Children promotes the safety and welfare of children through free family support, education, and prevention programs.</p></div><div><h2>Find help</h2><ul class="footer-links"><li><a href="get-help.html">Get Help Now</a></li><li><a href="programs.html">Programs</a></li><li><a href="resources.html">Resources</a></li></ul></div><div><h2>Get involved</h2><ul class="footer-links"><li><a href="volunteer.html">Volunteer</a></li><li><a href="events.html">2026 Events</a></li><li><a href="donate.html">Donate</a></li><li><a href="https://www.facebook.com/comecmemphis" target="_blank" rel="noopener noreferrer">Facebook</a></li><li><a href="https://www.youtube.com/watch?v=IUwCqhVjnOg" target="_blank" rel="noopener noreferrer">YouTube</a></li></ul></div><div><h2>Contact COMEC</h2><ul class="footer-links"><li>901-222-0700</li><li>616 Adams Avenue<br>Room 102<br>Memphis, TN 38105</li></ul></div></div><div class="container footer-bottom"><p>© <span data-current-year>2026</span> Commission on Missing and Exploited Children.</p><p>COMEC is not an emergency service. In immediate danger, call 911.</p></div></footer>
   <script src="assets/js/main.js" defer></script>
-  <script src="assets/js/gala-registration.js" defer></script>
+  <script src="assets/js/gala-registration.js?v=bbc0af67e09f" defer></script>
 </body>
 </html>

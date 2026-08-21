@@ -115,6 +115,15 @@
   const summaryMulligans = document.querySelector("[data-summary-mulligans]");
   const summaryCalculationRow = document.querySelector("[data-summary-calculation-row]");
   const summaryCalculation = document.querySelector("[data-summary-calculation]");
+  const mobileSummaryPackage = form.querySelector("[data-mobile-summary-package]");
+  const mobileSummaryTeamRow = form.querySelector("[data-mobile-summary-team-row]");
+  const mobileSummaryTeams = form.querySelector("[data-mobile-summary-teams]");
+  const mobileSummaryGolfers = form.querySelector("[data-mobile-summary-golfers]");
+  const mobileSummaryPrice = form.querySelector("[data-mobile-summary-price]");
+  const mobileSummaryMulliganRow = form.querySelector("[data-mobile-summary-mulligan-row]");
+  const mobileSummaryMulligans = form.querySelector("[data-mobile-summary-mulligans]");
+  const mobileSummaryCalculationRow = form.querySelector("[data-mobile-summary-calculation-row]");
+  const mobileSummaryCalculation = form.querySelector("[data-mobile-summary-calculation]");
   const configStatus = form.querySelector("[data-config-status]");
   const taxDisclosure = form.querySelector("[data-tax-disclosure]");
   const taxPrompt = form.querySelector("[data-tax-prompt]");
@@ -139,7 +148,12 @@
   let disclosureMode = "";
   let mulliganConfig = null;
   let individualManualPlayerValue = "";
+  let currentSummaryTotal = "—";
+  let submitting = false;
   const teamStates = [];
+
+  const purchaserPlayingCopy = purchaserPlayingField && purchaserPlayingField.querySelector("span");
+  if (purchaserPlayingCopy) purchaserPlayingCopy.textContent = "Use the purchaser’s name for Golfer 1.";
 
   function createIdempotencyKey() {
     if (!window.crypto || typeof window.crypto.getRandomValues !== "function") return "";
@@ -287,6 +301,7 @@
     const status = detail ? copy.status + " " + detail : copy.status;
     publicConfigLoaded = false;
     previewMode = true;
+    submitting = false;
     disclosureMode = "";
     Object.keys(packages).forEach(function (code) {
       const packageData = packages[code];
@@ -412,7 +427,7 @@
     disclosureMode = mode;
     packageRadios.forEach(function (radio) { radio.disabled = false; });
     submitButton.disabled = false;
-    submitLabel.textContent = "Continue to secure payment";
+    syncReadySubmitLabel();
     form.setAttribute("aria-busy", "false");
     configStatus.textContent = mode === paymentConfirmationMode
       ? "Current price and registration information loaded."
@@ -428,6 +443,33 @@
   function selectedPackageCode() {
     const checked = form.querySelector("[data-package-radio]:checked");
     return checked ? checked.value : "";
+  }
+
+  function readySubmitLabel() {
+    const total = currentSummaryTotal && currentSummaryTotal !== "—"
+      ? " — " + currentSummaryTotal
+      : "";
+    return "Continue to secure payment" + total;
+  }
+
+  function syncReadySubmitLabel() {
+    if (publicConfigLoaded && !submitting) submitLabel.textContent = readySubmitLabel();
+  }
+
+  function setSummaryText(desktopNode, mobileNode, text) {
+    if (desktopNode) desktopNode.textContent = text;
+    if (mobileNode) mobileNode.textContent = text;
+  }
+
+  function setSummaryRowHidden(desktopNode, mobileNode, hidden) {
+    if (desktopNode) desktopNode.hidden = hidden;
+    if (mobileNode) mobileNode.hidden = hidden;
+  }
+
+  function setSummaryTotal(text) {
+    currentSummaryTotal = text;
+    setSummaryText(summaryPrice, mobileSummaryPrice, text);
+    syncReadySubmitLabel();
   }
 
   function setSection(section, active) {
@@ -567,6 +609,7 @@
       input.name = "team_" + (teamIndex + 1) + "_player_" + (playerIndex + 1);
       input.type = "text";
       input.autocomplete = "off";
+      input.setAttribute("autocapitalize", "words");
       input.maxLength = 120;
       input.required = true;
       input.dataset.teamParticipant = "";
@@ -583,22 +626,22 @@
     if (purchaserField) purchaserField.hidden = count < 1;
   }
 
-  function createTeamCard(teamIndex, selected) {
+  function createTeamCard(teamIndex, selected, teamTotal) {
     const state = teamStates[teamIndex];
     const card = document.createElement("fieldset");
-    card.className = "form-section";
+    card.className = "form-section registration-unit-card";
     card.dataset.teamCard = "";
     card.dataset.teamIndex = String(teamIndex);
     const teamNumber = teamIndex + 1;
-    card.innerHTML = '<legend>Team ' + teamNumber + '</legend>'
+    card.innerHTML = '<legend>Team ' + teamNumber + ' of ' + teamTotal + '</legend>'
       + '<div class="form-grid form-grid--2">'
       + '<div class="form-field"><label for="team-' + teamNumber + '-name">Team ' + teamNumber + ' name <span aria-hidden="true">*</span></label>'
-      + '<input id="team-' + teamNumber + '-name" name="team_' + teamNumber + '_name" type="text" maxlength="120" required data-team-name></div>'
+      + '<input id="team-' + teamNumber + '-name" name="team_' + teamNumber + '_name" type="text" autocapitalize="words" maxlength="120" required data-team-name></div>'
       + '<div class="form-field"><label for="team-' + teamNumber + '-golfer-count">Number of golfers <span aria-hidden="true">*</span></label>'
       + '<select id="team-' + teamNumber + '-golfer-count" name="team_' + teamNumber + '_golfer_count" required data-team-golfer-count>'
       + '<option value="">Choose 1–4 golfers</option><option value="1">1 golfer</option><option value="2">2 golfers</option><option value="3">3 golfers</option><option value="4">4 golfers</option></select></div></div>'
       + (teamIndex === 0
-        ? '<label class="consent-field" data-team-purchaser-field hidden><input id="team-1-purchaser-is-playing" type="checkbox" data-team-purchaser-playing><span>The purchaser is playing on Team 1 — use their first and last name for Golfer 1.</span></label>'
+        ? '<label class="consent-field" data-team-purchaser-field hidden><input id="team-1-purchaser-is-playing" type="checkbox" data-team-purchaser-playing><span>Use the purchaser&rsquo;s name for Team 1, Golfer 1.</span></label>'
         : '')
       + '<div class="participant-grid" data-team-participants></div>'
       + '<label class="addon-option" data-team-addon-option><input id="team-' + teamNumber + '-mulligans" name="team_' + teamNumber + '_mulligans" type="checkbox" value="team_mulligans" data-team-mulligans>'
@@ -624,7 +667,7 @@
     ensureTeamStates(count);
     teamList.replaceChildren();
     for (let teamIndex = 0; teamIndex < count; teamIndex += 1) {
-      teamList.append(createTeamCard(teamIndex, selected));
+      teamList.append(createTeamCard(teamIndex, selected, count));
     }
     updateTeamMulliganLabels();
   }
@@ -703,46 +746,46 @@
       const hasTeam = Boolean(selected.team);
       const isIndividual = Boolean(selected.individual);
       const metrics = teamMetrics(selected);
-      summaryPackage.textContent = selected.name;
+      setSummaryText(summaryPackage, mobileSummaryPackage, selected.name);
       summaryIncludes.textContent = selected.includes;
-      summaryTeamRow.hidden = !hasTeam;
-      summaryMulliganRow.hidden = !hasTeam;
-      summaryCalculationRow.hidden = !hasTeam;
-      summaryTeams.textContent = hasTeam && metrics.count ? String(metrics.count) : "—";
-      summaryGolfers.textContent = hasTeam
+      setSummaryRowHidden(summaryTeamRow, mobileSummaryTeamRow, !hasTeam);
+      setSummaryRowHidden(summaryMulliganRow, mobileSummaryMulliganRow, !hasTeam);
+      setSummaryRowHidden(summaryCalculationRow, mobileSummaryCalculationRow, !hasTeam);
+      setSummaryText(summaryTeams, mobileSummaryTeams, hasTeam && metrics.count ? String(metrics.count) : "—");
+      setSummaryText(summaryGolfers, mobileSummaryGolfers, hasTeam
         ? (metrics.golfersComplete ? String(metrics.golfers) : "—")
-        : isIndividual ? "1" : "0";
-      summaryMulligans.textContent = String(metrics.mulligans);
+        : isIndividual ? "1" : "0");
+      setSummaryText(summaryMulligans, mobileSummaryMulligans, String(metrics.mulligans));
       if (hasTeam && metrics.count && Number.isInteger(selected.price)) {
         const packageText = money.format(selected.price / 100) + " × " + metrics.count + (metrics.count === 1 ? " team" : " teams");
         const addonText = metrics.mulligans && mulliganConfig
           ? " + " + money.format(mulliganConfig.price / 100) + " × " + metrics.mulligans + (metrics.mulligans === 1 ? " mulligan team" : " mulligan teams")
           : "";
-        summaryCalculation.textContent = packageText + addonText;
+        setSummaryText(summaryCalculation, mobileSummaryCalculation, packageText + addonText);
       } else {
-        summaryCalculation.textContent = "—";
+        setSummaryText(summaryCalculation, mobileSummaryCalculation, "—");
       }
       if (!displayConfigReady() || !Number.isInteger(selected.price) || (hasTeam && !metrics.count)) {
-        summaryPrice.textContent = "—";
+        setSummaryTotal("—");
       } else {
         const packageTotal = selected.price * (hasTeam ? metrics.count : 1);
         const addonTotal = metrics.mulligans && mulliganConfig ? mulliganConfig.price * metrics.mulligans : 0;
-        summaryPrice.textContent = money.format((packageTotal + addonTotal) / 100);
+        setSummaryTotal(money.format((packageTotal + addonTotal) / 100));
       }
       updateTaxDisclosure(selected, metrics.count, metrics.mulligans);
       return;
     }
 
-    summaryPackage.textContent = "Choose an option";
+    setSummaryText(summaryPackage, mobileSummaryPackage, "Choose an option");
     summaryIncludes.textContent = "—";
-    summaryTeamRow.hidden = true;
-    summaryMulliganRow.hidden = true;
-    summaryCalculationRow.hidden = true;
-    summaryTeams.textContent = "—";
-    summaryGolfers.textContent = "—";
-    summaryPrice.textContent = "—";
-    summaryMulligans.textContent = "0";
-    summaryCalculation.textContent = "—";
+    setSummaryRowHidden(summaryTeamRow, mobileSummaryTeamRow, true);
+    setSummaryRowHidden(summaryMulliganRow, mobileSummaryMulliganRow, true);
+    setSummaryRowHidden(summaryCalculationRow, mobileSummaryCalculationRow, true);
+    setSummaryText(summaryTeams, mobileSummaryTeams, "—");
+    setSummaryText(summaryGolfers, mobileSummaryGolfers, "—");
+    setSummaryTotal("—");
+    setSummaryText(summaryMulligans, mobileSummaryMulligans, "0");
+    setSummaryText(summaryCalculation, mobileSummaryCalculation, "—");
     updateTaxDisclosure(null, 0, 0);
   }
 
@@ -787,10 +830,29 @@
     updateRegistrationSummary(selected);
   }
 
+  function focusImmediately(control) {
+    if (!control || typeof control.focus !== "function") return;
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    try {
+      try {
+        control.focus({ preventScroll: true });
+      } catch (error) {
+        control.focus();
+      }
+      if (typeof control.scrollIntoView === "function") {
+        control.scrollIntoView({ behavior: "auto", block: "center", inline: "nearest" });
+      }
+    } finally {
+      root.style.scrollBehavior = previousScrollBehavior;
+    }
+  }
+
   function showError(message) {
     errorAlert.textContent = message;
     errorAlert.hidden = false;
-    errorAlert.focus();
+    focusImmediately(errorAlert);
   }
 
   function clearError() {
@@ -891,12 +953,13 @@
   }
 
   function setSubmitting(isSubmitting) {
+    submitting = isSubmitting;
     form.setAttribute("aria-busy", String(isSubmitting));
     submitButton.disabled = isSubmitting || !publicConfigLoaded;
     submitLabel.textContent = isSubmitting
       ? "Opening secure checkout…"
       : publicConfigLoaded
-        ? "Continue to secure payment"
+        ? readySubmitLabel()
         : previewMode ? unavailableCopy().button : "Checkout temporarily unavailable";
     submitSpinner.hidden = !isSubmitting;
   }
@@ -1037,7 +1100,7 @@
       showError("Please complete the required fields before continuing.");
       form.reportValidity();
       const firstInvalid = form.querySelector(":invalid");
-      if (firstInvalid) firstInvalid.focus();
+      focusImmediately(firstInvalid);
       return;
     }
 
@@ -1058,7 +1121,7 @@
       const totalTeams = selectedTeamCount();
       if (totalTeams < 1 || totalTeams > 10) {
         showError("Please choose how many teams you are registering.");
-        teamCount.focus();
+        focusImmediately(teamCount);
         return;
       }
       ensureTeamStates(totalTeams);
@@ -1070,13 +1133,13 @@
         if (!name) {
           showError("Please enter a name for every team.");
           const nameField = card && card.querySelector("[data-team-name]");
-          if (nameField) nameField.focus();
+          focusImmediately(nameField);
           return;
         }
         if (!Number.isInteger(totalGolfers) || totalGolfers < 1 || totalGolfers > 4) {
           showError("Please choose 1–4 golfers for every team.");
           const countField = card && card.querySelector("[data-team-golfer-count]");
-          if (countField) countField.focus();
+          focusImmediately(countField);
           return;
         }
         const names = state.participants.slice(0, totalGolfers).map(function (playerName) {
@@ -1086,7 +1149,7 @@
         if (blankPlayer !== -1) {
           showError("Please enter the name of every golfer attending.");
           const playerField = card && card.querySelector('[data-team-player-index="' + blankPlayer + '"]');
-          if (playerField) playerField.focus();
+          focusImmediately(playerField);
           return;
         }
         teams.push({
@@ -1099,13 +1162,13 @@
       const golferTotal = selectedGolferCount();
       if (golferTotal !== 1) {
         showError("Please confirm the golfer attending.");
-        golferCount.focus();
+        focusImmediately(golferCount);
         return;
       }
       const individualName = individualPlayers[0].value.trim();
       if (!individualName) {
         showError("Please enter the golfer’s name.");
-        individualPlayers[0].focus();
+        focusImmediately(individualPlayers[0]);
         return;
       }
       participants = [{ name: individualName }];
