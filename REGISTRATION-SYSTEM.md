@@ -1,6 +1,6 @@
 # COMEC Event Registration System
 
-This build adds separate, reconcilable registration flows for COMEC's 2026 golf tournament and Christmas gala. This version is currently saved to pCloud only; it has not been pushed to the GitHub preview or deployed to Namecheap `public_html` at `www.comec.org`.
+This build adds separate, reconcilable registration flows for COMEC's 2026 golf tournament and Christmas gala. The source is synchronized to pCloud and GitHub, and the full payment workflow has passed protected Namecheap staging acceptance. Production `public_html` at `www.comec.org` remains on the prior site until the production-only credentials, database, webhook, workers, backup, and final deployment approval are complete.
 
 ## What the system does
 

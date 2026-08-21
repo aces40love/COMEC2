@@ -1120,6 +1120,19 @@ $tests['Square checkout URLs use HTTPS and an explicitly allowed Square host'] =
     }
 };
 
+$tests['production htaccess canonicalizes every request to HTTPS www'] = static function () use ($siteRoot): void {
+    $source = file_get_contents($siteRoot . '/.htaccess');
+    test_assert_true(is_string($source), 'Could not read the production .htaccess file.');
+    foreach ([
+        'RewriteCond %{HTTPS} !=on',
+        'RewriteCond %{HTTPS} =on',
+        'RewriteCond %{HTTP_HOST} !^www\\.comec\\.org(?::443)?$ [NC]',
+        'RewriteRule ^ https://www.comec.org%{REQUEST_URI} [R=301,L,NE]',
+    ] as $fragment) {
+        test_assert_true(str_contains($source, $fragment), 'Missing canonical-host rule: ' . $fragment);
+    }
+};
+
 $tests['Square receipt URLs are strict and sandbox hosts are environment-gated'] = static function (): void {
     foreach ([
         'https://squareup.com/receipt/preview/abc123',

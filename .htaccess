@@ -13,6 +13,10 @@ Options -Indexes
 
   RewriteCond %{HTTPS} !=on
   RewriteRule ^ https://www.comec.org%{REQUEST_URI} [R=301,L,NE]
+
+  RewriteCond %{HTTPS} =on
+  RewriteCond %{HTTP_HOST} !^www\.comec\.org(?::443)?$ [NC]
+  RewriteRule ^ https://www.comec.org%{REQUEST_URI} [R=301,L,NE]
 </IfModule>
 
 <FilesMatch "(?i)(^\.|config(?:\..*)?\.php$|\.(?:sql|log|md|markdown|ini|env|ya?ml|sh|ps1|cmd|bat)$)">
